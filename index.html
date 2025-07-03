@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Chromatic Circle</title>
+    <style>
+        html, body {
+            margin: 0; padding: 0; height: 100%; overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #000000; color: #FFFFFF;
+        }
+        body {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .controls {
+            padding: 10px 15px; margin-bottom: 15px; background-color: #1a1a1a;
+            border: 1px solid #333; border-radius: 8px; display: flex;
+            flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 15px;
+        }
+        label { font-weight: bold; }
+        select, input, button {
+            background-color: #333; color: #fff; border: 1px solid #555;
+            padding: 8px 12px; border-radius: 4px; font-size: 1em; cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+            vertical-align: middle;
+        }
+        input[type="number"] { width: 60px; }
+        input[type="range"] { padding: 0; cursor: grab; }
+        input[type="range"]:active { cursor: grabbing; }
+        select:hover, input:hover, button:hover:not(:disabled) {
+            background-color: #444; border-color: #777;
+        }
+        button:disabled, select:disabled, input:disabled {
+            background-color: #222; color: #666; border-color: #444; cursor: not-allowed;
+        }
+        .play-mode-active { background-color: #00C853; border-color: #00e676; }
+        .control-group { display: inline-flex; align-items: center; gap: 8px; }
+        .divider { border-left: 1px solid #444; margin: 0 5px; height: 25px; }
+        #canvas-container { position: relative; }
+        #chromaticCircleCanvas.play-mode { cursor: pointer; }
+        .instructions {
+            margin-top: 15px; color: #aaa; font-style: italic;
+            text-align: center; height: 1.2em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+         <div class="control-group">
+            <button id="play-mode-btn">Play Mode</button>
+        </div>
+        <div class="divider"></div>
+        <div class="control-group">
+            <label for="base-freq-input">Base Hz:</label>
+            <input type="number" id="base-freq-input" value="110" min="1">
+            <label for="edo-input">EDO:</label>
+            <input type="number" id="edo-input" value="12" min="1" max="360">
+            <button id="show-edo-freqs-btn">EDO Freqs</button>
+        </div>
+        <div class="control-group">
+            <label for="edo-zoom-slider">EDO Zoom:</label>
+            <input type="range" id="edo-zoom-slider" min="0.5" max="2" step="0.01" value="1">
+        </div>
+        <button id="reset-btn">Reset</button>
+        <div class="divider"></div>
+        <div class="control-group">
+            <button id="toggle-ratios-btn">JI Ratios</button>
+            <button id="show-ji-freqs-btn">JI Freqs</button>
+            <button id="toggle-names-btn">Names</button>
+            <button id="animate-btn">Animate JI</button>
+        </div>
+        <div class="control-group">
+            <label for="ji-zoom-slider">JI Zoom:</label>
+            <input type="range" id="ji-zoom-slider" min="0.5" max="2" step="0.01" value="1">
+        </div>
+        <div class="divider"></div>
+        <div class="control-group">
+            <label for="interval-select">Interval:</label>
+            <select id="interval-select" disabled></select>
+            <button id="add-interval-btn" disabled>Add</button>
+        </div>
+    </div>
+
+    <div id="canvas-container"><canvas id="chromaticCircleCanvas"></canvas></div>
+    <p id="instructions" class="instructions">Enter an EDO, then click a number on the circle.</p>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM References & State ---
+            const allControls = document.querySelectorAll('.controls input, .controls button, .controls select');
+            const playModeBtn = document.getElementById('play-mode-btn');
+            const edoInput = document.getElementById('edo-input'), baseFreqInput = document.getElementById('base-freq-input');
+            const showEdoFreqsBtn = document.getElementById('show-edo-freqs-btn'), showJiFreqsBtn = document.getElementById('show-ji-freqs-btn');
+            const intervalSelect = document.getElementById('interval-select'), addIntervalBtn = document.getElementById('add-interval-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const toggleRatiosBtn = document.getElementById('toggle-ratios-btn'), toggleNamesBtn = document.getElementById('toggle-names-btn');
+            const animateBtn = document.getElementById('animate-btn');
+            const edoZoomSlider = document.getElementById('edo-zoom-slider'), jiZoomSlider = document.getElementById('ji-zoom-slider');
+            const instructions = document.getElementById('instructions');
+            const canvas = document.getElementById('chromaticCircleCanvas'), ctx = canvas.getContext('2d');
+
+            let edo = 12, rootNoteIndex = null, currentNoteIndex = null, edoZoom = 1, jiZoom = 1, baseFrequency = 110;
+            let edoNotes = [], jiNotes = [], path = [];
+            let isAnimating = false, isPlayMode = false, isAudioInitialized = false;
+            let showRatios = false, showIntervalNames = false, showEdoFreqs = false, showJiFreqs = false;
+            
+            // --- Web Audio API State ---
+            let audioContext, audioBuffer = null;
+
+            // --- Constants & Maps ---
+            const JUST_INTONATION_RATIOS = [ { label: '1/1', value: 1/1, name: 'Unison' }, { label: '16/15', value: 16/15, name: 'm2' }, { label: '9/8', value: 9/8, name: 'M2' }, { label: '6/5', value: 6/5, name: 'm3' }, { label: '5/4', value: 5/4, name: 'M3' }, { label: '4/3', value: 4/3, name: 'P4' }, { label: '45/32', value: 45/32, name: 'Tritone' }, { label: '3/2', value: 3/2, name: 'P5' }, { label: '8/5', value: 8/5, name: 'm6' }, { label: '5/3', value: 5/3, name: 'M6' }, { label: '9/5', value: 9/5, name: 'm7' }, { label: '15/8', value: 15/8, name: 'M7' } ].sort((a, b) => a.value - b.value);
+            const UNROLL_DURATION = 2000, HOLD_DURATION = 1500, ROLL_BACK_DURATION = 2000;
+            const TOTAL_ANIMATION_DURATION = UNROLL_DURATION + HOLD_DURATION + ROLL_BACK_DURATION;
+
+            // --- Canvas Geometry ---
+            let canvasSize, centerX, centerY, noteRadius;
+            let baseCircleRadius, circleRadius, edoFreqLabelRadius, ratioLabelRadius, jiFreqLabelRadius, nameLabelRadius;
+            
+            function resizeAndRecalculate() {
+                canvasSize = Math.min(window.innerWidth * 0.95, window.innerHeight * 0.75);
+                canvas.width = canvasSize; canvas.height = canvasSize;
+                centerX = canvas.width / 2; centerY = canvas.height / 2;
+                baseCircleRadius = canvas.width * 0.22;
+                updateAllRadii();
+            }
+
+            function updateAllRadii() {
+                circleRadius = baseCircleRadius * edoZoom;
+                edoFreqLabelRadius = circleRadius * 1.30;
+                ratioLabelRadius = circleRadius * 1.60 * jiZoom;
+                jiFreqLabelRadius = circleRadius * 1.90 * jiZoom;
+                nameLabelRadius = circleRadius * 2.20 * jiZoom;
+                noteRadius = Math.max(9, canvas.width / 50);
+            }
+
+            // --- Setup and Note Generation ---
+            function setup(isReset = false) {
+                if (isReset) {
+                    edoZoomSlider.value = 1; jiZoomSlider.value = 1; edoZoom = 1; jiZoom = 1;
+                    showRatios = false; showIntervalNames = false; showEdoFreqs = false; showJiFreqs = false;
+                    baseFreqInput.value = 110; edoInput.value = 12;
+                    if(isPlayMode) togglePlayMode();
+                }
+                isAnimating = false;
+                let newEdo = parseInt(edoInput.value, 10);
+                if (isNaN(newEdo) || newEdo < 1) newEdo = 12; if (newEdo > 360) newEdo = 360;
+                edoInput.value = newEdo; edo = newEdo;
+                let newFreq = parseFloat(baseFreqInput.value);
+                if (isNaN(newFreq) || newFreq <= 0) newFreq = 110;
+                baseFreqInput.value = newFreq; baseFrequency = newFreq;
+                rootNoteIndex = currentNoteIndex = null; path = [];
+                resizeAndRecalculate(); generateAllNotes(); updateControls(); draw();
+            }
+            function generateAllNotes() { generateEDONotes(); generateJINotes(); }
+            function generateEDONotes() {
+                edoNotes = Array.from({ length: edo }, (_, i) => {
+                    const angle = (i / edo) * 2 * Math.PI - Math.PI / 2;
+                    const freq = baseFrequency * Math.pow(2, i / edo);
+                    return { x: centerX + circleRadius * Math.cos(angle), y: centerY + circleRadius * Math.sin(angle), freqX: centerX + edoFreqLabelRadius * Math.cos(angle), freqY: centerY + edoFreqLabelRadius * Math.sin(angle), label: i, frequency: freq, hitRadius: noteRadius };
+                });
+            }
+            function generateJINotes() {
+                jiNotes = JUST_INTONATION_RATIOS.map(ratio => {
+                    const cents = 1200 * Math.log2(ratio.value);
+                    const angle = (cents / 1200) * 2 * Math.PI - Math.PI / 2;
+                    const freq = baseFrequency * ratio.value;
+                    return { ratioX: centerX + ratioLabelRadius * Math.cos(angle), ratioY: centerY + ratioLabelRadius * Math.sin(angle), freqX: centerX + jiFreqLabelRadius * Math.cos(angle), freqY: centerY + jiFreqLabelRadius * Math.sin(angle), nameX: centerX + nameLabelRadius * Math.cos(angle), nameY: centerY + nameLabelRadius * Math.sin(angle), label: ratio.label, name: ratio.name, cents, frequency: freq, hitRadius: 15 };
+                });
+            }
+
+            // --- Drawing Functions ---
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawMainCircle();
+                if (showEdoFreqs) drawEdoFrequencies(); if (showRatios) drawRatios();
+                if (showJiFreqs) drawJiFrequencies(); if (showIntervalNames) drawIntervalNames();
+                drawConnectingLines(); drawEDONotes();
+            }
+            function drawMainCircle() { ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(centerX, centerY, circleRadius, 0, 2 * Math.PI); ctx.stroke(); }
+            function drawEdoFrequencies() { ctx.fillStyle = '#FFFFFF'; ctx.font = '11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; edoNotes.forEach(note => ctx.fillText(`${note.frequency.toFixed(1)}Hz`, note.freqX, note.freqY)); }
+            function drawRatios() { ctx.fillStyle = '#6495ED'; ctx.font = '12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; jiNotes.forEach(note => ctx.fillText(note.label, note.ratioX, note.ratioY)); }
+            function drawJiFrequencies() { ctx.fillStyle = '#6495ED'; ctx.font = '11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; jiNotes.forEach(note => ctx.fillText(`${note.frequency.toFixed(1)}Hz`, note.freqX, note.freqY)); }
+            function drawIntervalNames() { ctx.fillStyle = '#6495ED'; ctx.font = '11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; jiNotes.forEach(note => ctx.fillText(note.name, note.nameX, note.nameY)); }
+            function drawConnectingLines() { if (path.length <= 1) return; ctx.strokeStyle = '#CCCCCC'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(edoNotes[path[0]].x, edoNotes[path[0]].y); path.slice(1).forEach(index => ctx.lineTo(edoNotes[index].x, edoNotes[index].y)); ctx.stroke(); }
+            function drawEDONotes() { edoNotes.forEach((note, index) => { ctx.beginPath(); ctx.arc(note.x, note.y, noteRadius, 0, 2 * Math.PI); ctx.fillStyle = (index === currentNoteIndex) ? '#00C853' : '#000000'; ctx.fill(); ctx.strokeStyle = '#FFFFFF'; ctx.stroke(); ctx.fillStyle = '#FFFFFF'; ctx.font = `${Math.max(8, noteRadius * 0.75)}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(note.label, note.x, note.y); }); }
+            
+            // --- UI & Controls ---
+            function updateControls() {
+                const hasRoot = rootNoteIndex !== null;
+                allControls.forEach(el => el.disabled = isAnimating);
+                if (!isAnimating) {
+                    intervalSelect.disabled = !hasRoot || isPlayMode; addIntervalBtn.disabled = !hasRoot || isPlayMode;
+                    toggleNamesBtn.disabled = !showRatios;
+                }
+                if (isPlayMode) {
+                    instructions.textContent = 'Play Mode: Click or touch notes to play them.';
+                } else if (!hasRoot && !isAnimating) {
+                    instructions.textContent = 'Enter Base Hz & EDO, then click a number.';
+                } else if (hasRoot) {
+                    instructions.textContent = `Current note: ${currentNoteIndex}. Select an interval.`;
+                } else {
+                    instructions.textContent = `Animating...`;
+                }
+                if (!isAnimating && !isPlayMode) {
+                    const currentInterval = intervalSelect.value;
+                    intervalSelect.innerHTML = '';
+                    for (let i = 1; i < edo; i++) {
+                        const option = document.createElement('option');
+                        option.value = i; option.textContent = i; intervalSelect.appendChild(option);
+                    }
+                    if (currentInterval) intervalSelect.value = currentInterval;
+                }
+            }
+
+            // --- Animation Logic ---
+            const easeInOut = t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+            function startAnimation() { /* ... unchanged ... */ } // (This function is long, so I'm omitting for brevity, it's the same as v10)
+            function drawAnimationFrame(interpolatedNotes, edoAlpha) { /* ... unchanged ... */ }
+            // Paste the startAnimation and drawAnimationFrame functions from the previous version here
+            function startAnimation() {
+                if (isAnimating) return;
+                isAnimating = true;
+                rootNoteIndex = currentNoteIndex = null; path = [];
+                showRatios = true; showIntervalNames = false; showEdoFreqs = false; showJiFreqs = false;
+                updateControls();
+                
+                const lineLength = canvas.width * 0.8; const lineStartX = canvas.width * 0.1; const lineY = canvas.height * 0.9;
+                const linePositions = jiNotes.map(note => ({ x: lineStartX + (note.cents / 1200) * lineLength, y: lineY }));
+                const circlePositions = jiNotes.map(note => ({ x: note.ratioX, y: note.ratioY }));
+                const startTime = performance.now();
+                
+                requestAnimationFrame(function animationLoop(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    let easedProgress, edoAlpha, interpolatedNotes;
+
+                    if (elapsed < UNROLL_DURATION) {
+                        easedProgress = easeInOut(elapsed / UNROLL_DURATION);
+                        edoAlpha = 1.0 - easedProgress;
+                        interpolatedNotes = jiNotes.map((_, i) => ({ x: circlePositions[i].x + (linePositions[i].x - circlePositions[i].x) * easedProgress, y: circlePositions[i].y + (linePositions[i].y - circlePositions[i].y) * easedProgress, label: jiNotes[i].label }));
+                    } else if (elapsed < UNROLL_DURATION + HOLD_DURATION) {
+                        edoAlpha = 0.0;
+                        interpolatedNotes = jiNotes.map((_, i) => ({ ...linePositions[i], label: jiNotes[i].label }));
+                    } else {
+                        const phaseElapsed = elapsed - (UNROLL_DURATION + HOLD_DURATION);
+                        easedProgress = easeInOut(Math.min(1, phaseElapsed / ROLL_BACK_DURATION));
+                        edoAlpha = easedProgress;
+                        interpolatedNotes = jiNotes.map((_, i) => ({ x: linePositions[i].x + (circlePositions[i].x - linePositions[i].x) * easedProgress, y: linePositions[i].y + (circlePositions[i].y - linePositions[i].y) * easedProgress, label: jiNotes[i].label }));
+                    }
+
+                    drawAnimationFrame(interpolatedNotes, edoAlpha);
+
+                    if (elapsed < TOTAL_ANIMATION_DURATION) { requestAnimationFrame(animationLoop); } 
+                    else { isAnimating = false; updateControls(); draw(); }
+                });
+            }
+
+            function drawAnimationFrame(interpolatedNotes, edoAlpha) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.globalAlpha = edoAlpha;
+                drawMainCircle(); drawEDONotes();
+                ctx.globalAlpha = 1.0;
+                ctx.strokeStyle = '#6495ED'; ctx.lineWidth = 1.5; ctx.beginPath();
+                ctx.moveTo(interpolatedNotes[0].x, interpolatedNotes[0].y);
+                interpolatedNotes.slice(1).forEach(note => ctx.lineTo(note.x, note.y));
+                ctx.stroke();
+                ctx.fillStyle = '#6495ED'; ctx.font = '12px Arial';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                interpolatedNotes.forEach(note => ctx.fillText(note.label, note.x, note.y - 5));
+            }
+
+
+            // --- Audio Engine ---
+            async function initAudio() {
+                if (isAudioInitialized) return;
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                try {
+                    const response = await fetch('base_sound_110hz.wav');
+                    if (!response.ok) throw new Error('File not found');
+                    const arrayBuffer = await response.arrayBuffer();
+                    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    console.log('Successfully loaded and decoded base_sound_110hz.wav');
+                } catch (error) {
+                    console.warn('Could not load base_sound_110hz.wav. Falling back to synth pluck.', error.message);
+                    audioBuffer = null;
+                }
+                isAudioInitialized = true;
+            }
+
+            function playNote(frequency) {
+                if (!audioContext || audioContext.state === 'suspended') audioContext.resume();
+                if (audioBuffer) {
+                    playSample(frequency);
+                } else {
+                    playSynth(frequency);
+                }
+            }
+
+            function playSample(frequency) {
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                // Pitch shift by adjusting playback rate relative to the sample's base frequency
+                source.playbackRate.value = frequency / 110.0;
+                source.connect(audioContext.destination);
+                source.start(0);
+            }
+
+            function playSynth(frequency) {
+                const osc = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                const now = audioContext.currentTime;
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(frequency, now);
+
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(0.5, now + 0.01); // Quick attack
+                gainNode.gain.linearRampToValueAtTime(0, now + 0.5);   // Decay
+
+                osc.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+
+            // --- Event Handlers ---
+            function togglePlayMode() {
+                if (!isAudioInitialized) initAudio();
+                isPlayMode = !isPlayMode;
+                playModeBtn.classList.toggle('play-mode-active', isPlayMode);
+                canvas.classList.toggle('play-mode', isPlayMode);
+                rootNoteIndex = currentNoteIndex = null; path = []; // Reset selection when toggling mode
+                updateControls();
+                draw();
+            }
+
+            function handleCanvasInteraction(e) {
+                if (!isPlayMode) { // Standard mode: set root note
+                    if (rootNoteIndex !== null || isAnimating) return;
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+                    for (const [index, note] of edoNotes.entries()) {
+                        if (Math.sqrt((x - note.x)**2 + (y - note.y)**2) < note.hitRadius) {
+                            rootNoteIndex = currentNoteIndex = index; path.push(index); updateControls(); draw(); break;
+                        }
+                    }
+                } else { // Play mode: play notes
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+                    const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+                    
+                    // Check EDO notes first
+                    for (const note of edoNotes) {
+                        if (Math.sqrt((x - note.x)**2 + (y - note.y)**2) < note.hitRadius) {
+                            playNote(note.frequency); return;
+                        }
+                    }
+                    // Check JI notes if they are visible
+                    if (showRatios) {
+                        for (const note of jiNotes) {
+                           if (Math.sqrt((x - note.ratioX)**2 + (y - note.ratioY)**2) < note.hitRadius) {
+                                playNote(note.frequency); return;
+                           }
+                        }
+                    }
+                }
+            }
+
+            playModeBtn.addEventListener('click', togglePlayMode);
+            edoInput.addEventListener('change', () => setup()); baseFreqInput.addEventListener('change', () => setup());
+            resetBtn.addEventListener('click', () => setup(true)); animateBtn.addEventListener('click', startAnimation);
+            toggleRatiosBtn.addEventListener('click', () => { if(!isAnimating) { showRatios = !showRatios; if (!showRatios) showIntervalNames = false; updateControls(); draw(); }});
+            toggleNamesBtn.addEventListener('click', () => { if(!isAnimating && showRatios) { showIntervalNames = !showIntervalNames; draw(); }});
+            showEdoFreqsBtn.addEventListener('click', () => { if(!isAnimating) { showEdoFreqs = !showEdoFreqs; draw(); }});
+            showJiFreqsBtn.addEventListener('click', () => { if(!isAnimating) { showJiFreqs = !showJiFreqs; draw(); }});
+            addIntervalBtn.addEventListener('click', () => { if (currentNoteIndex === null || isAnimating) return; currentNoteIndex = (currentNoteIndex + parseInt(intervalSelect.value)) % edo; path.push(currentNoteIndex); updateControls(); draw(); });
+            edoZoomSlider.addEventListener('input', (e) => { edoZoom = parseFloat(e.target.value); updateAllRadii(); generateAllNotes(); draw(); });
+            jiZoomSlider.addEventListener('input', (e) => { jiZoom = parseFloat(e.target.value); updateAllRadii(); generateJINotes(); draw(); });
+            canvas.addEventListener('click', handleCanvasInteraction);
+            canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleCanvasInteraction(e); });
+            window.addEventListener('resize', () => setup());
+            setup();
+        });
+    </script>
+</body>
+</html>
