@@ -80,6 +80,7 @@
             <label for="interval-select">Interval:</label>
             <select id="interval-select" disabled></select>
             <button id="add-interval-btn" disabled>Add</button>
+            <button id="play-chord-btn" disabled>Play Chord</button>
         </div>
     </div>
 
@@ -91,6 +92,7 @@
             // --- DOM References & State ---
             const allControls = document.querySelectorAll('.controls input, .controls button, .controls select');
             const playModeBtn = document.getElementById('play-mode-btn');
+            const playChordBtn = document.getElementById('play-chord-btn');
             const edoInput = document.getElementById('edo-input'), baseFreqInput = document.getElementById('base-freq-input');
             const showEdoFreqsBtn = document.getElementById('show-edo-freqs-btn'), showJiFreqsBtn = document.getElementById('show-ji-freqs-btn');
             const intervalSelect = document.getElementById('interval-select'), addIntervalBtn = document.getElementById('add-interval-btn');
@@ -106,7 +108,6 @@
             let isAnimating = false, isPlayMode = false, isAudioInitialized = false;
             let showRatios = false, showIntervalNames = false, showEdoFreqs = false, showJiFreqs = false;
             
-            // --- Web Audio API State ---
             let audioContext, audioBuffer = null;
 
             // --- Constants & Maps ---
@@ -191,34 +192,29 @@
                 const hasRoot = rootNoteIndex !== null;
                 allControls.forEach(el => el.disabled = isAnimating);
                 if (!isAnimating) {
-                    intervalSelect.disabled = !hasRoot || isPlayMode; addIntervalBtn.disabled = !hasRoot || isPlayMode;
+                    intervalSelect.disabled = !hasRoot || isPlayMode;
+                    addIntervalBtn.disabled = !hasRoot || isPlayMode;
+                    playChordBtn.disabled = path.length < 2;
                     toggleNamesBtn.disabled = !showRatios;
                 }
-                if (isPlayMode) {
-                    instructions.textContent = 'Play Mode: Click or touch notes to play them.';
-                } else if (!hasRoot && !isAnimating) {
-                    instructions.textContent = 'Enter Base Hz & EDO, then click a number.';
-                } else if (hasRoot) {
-                    instructions.textContent = `Current note: ${currentNoteIndex}. Select an interval.`;
-                } else {
-                    instructions.textContent = `Animating...`;
-                }
+                if (isPlayMode) { instructions.textContent = 'Play Mode: Click or touch notes to play them.'; } 
+                else if (!hasRoot && !isAnimating) { instructions.textContent = 'Enter Base Hz & EDO, then click a number.'; } 
+                else if (hasRoot) { instructions.textContent = `Current note: ${currentNoteIndex}. Select an interval.`; } 
+                else { instructions.textContent = `Animating...`; }
                 if (!isAnimating && !isPlayMode) {
                     const currentInterval = intervalSelect.value;
                     intervalSelect.innerHTML = '';
                     for (let i = 1; i < edo; i++) {
                         const option = document.createElement('option');
-                        option.value = i; option.textContent = i; intervalSelect.appendChild(option);
+                        option.value = i; option.textContent = i;
+                        intervalSelect.appendChild(option);
                     }
                     if (currentInterval) intervalSelect.value = currentInterval;
                 }
             }
-
-            // --- Animation Logic ---
+            
+            // --- Animation (unchanged) ---
             const easeInOut = t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-            function startAnimation() { /* ... unchanged ... */ } // (This function is long, so I'm omitting for brevity, it's the same as v10)
-            function drawAnimationFrame(interpolatedNotes, edoAlpha) { /* ... unchanged ... */ }
-            // Paste the startAnimation and drawAnimationFrame functions from the previous version here
             function startAnimation() {
                 if (isAnimating) return;
                 isAnimating = true;
@@ -234,42 +230,32 @@
                 requestAnimationFrame(function animationLoop(currentTime) {
                     const elapsed = currentTime - startTime;
                     let easedProgress, edoAlpha, interpolatedNotes;
-
                     if (elapsed < UNROLL_DURATION) {
-                        easedProgress = easeInOut(elapsed / UNROLL_DURATION);
-                        edoAlpha = 1.0 - easedProgress;
+                        easedProgress = easeInOut(elapsed / UNROLL_DURATION); edoAlpha = 1.0 - easedProgress;
                         interpolatedNotes = jiNotes.map((_, i) => ({ x: circlePositions[i].x + (linePositions[i].x - circlePositions[i].x) * easedProgress, y: circlePositions[i].y + (linePositions[i].y - circlePositions[i].y) * easedProgress, label: jiNotes[i].label }));
                     } else if (elapsed < UNROLL_DURATION + HOLD_DURATION) {
                         edoAlpha = 0.0;
                         interpolatedNotes = jiNotes.map((_, i) => ({ ...linePositions[i], label: jiNotes[i].label }));
                     } else {
                         const phaseElapsed = elapsed - (UNROLL_DURATION + HOLD_DURATION);
-                        easedProgress = easeInOut(Math.min(1, phaseElapsed / ROLL_BACK_DURATION));
-                        edoAlpha = easedProgress;
+                        easedProgress = easeInOut(Math.min(1, phaseElapsed / ROLL_BACK_DURATION)); edoAlpha = easedProgress;
                         interpolatedNotes = jiNotes.map((_, i) => ({ x: linePositions[i].x + (circlePositions[i].x - linePositions[i].x) * easedProgress, y: linePositions[i].y + (circlePositions[i].y - linePositions[i].y) * easedProgress, label: jiNotes[i].label }));
                     }
-
                     drawAnimationFrame(interpolatedNotes, edoAlpha);
-
                     if (elapsed < TOTAL_ANIMATION_DURATION) { requestAnimationFrame(animationLoop); } 
                     else { isAnimating = false; updateControls(); draw(); }
                 });
             }
-
             function drawAnimationFrame(interpolatedNotes, edoAlpha) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.globalAlpha = edoAlpha;
-                drawMainCircle(); drawEDONotes();
-                ctx.globalAlpha = 1.0;
+                ctx.globalAlpha = edoAlpha; drawMainCircle(); drawEDONotes(); ctx.globalAlpha = 1.0;
                 ctx.strokeStyle = '#6495ED'; ctx.lineWidth = 1.5; ctx.beginPath();
                 ctx.moveTo(interpolatedNotes[0].x, interpolatedNotes[0].y);
                 interpolatedNotes.slice(1).forEach(note => ctx.lineTo(note.x, note.y));
                 ctx.stroke();
-                ctx.fillStyle = '#6495ED'; ctx.font = '12px Arial';
-                ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                ctx.fillStyle = '#6495ED'; ctx.font = '12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
                 interpolatedNotes.forEach(note => ctx.fillText(note.label, note.x, note.y - 5));
             }
-
 
             // --- Audio Engine ---
             async function initAudio() {
@@ -280,48 +266,44 @@
                     if (!response.ok) throw new Error('File not found');
                     const arrayBuffer = await response.arrayBuffer();
                     audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                    console.log('Successfully loaded and decoded base_sound_110hz.wav');
+                    console.log('Successfully loaded base_sound_110hz.wav');
                 } catch (error) {
                     console.warn('Could not load base_sound_110hz.wav. Falling back to synth pluck.', error.message);
                     audioBuffer = null;
                 }
                 isAudioInitialized = true;
             }
-
             function playNote(frequency) {
                 if (!audioContext || audioContext.state === 'suspended') audioContext.resume();
                 if (audioBuffer) {
-                    playSample(frequency);
+                    const source = audioContext.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.playbackRate.value = frequency / 110.0;
+                    source.connect(audioContext.destination);
+                    source.start(0);
                 } else {
-                    playSynth(frequency);
+                    const osc = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    const now = audioContext.currentTime;
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(frequency, now);
+                    gainNode.gain.setValueAtTime(0, now);
+                    gainNode.gain.linearRampToValueAtTime(0.5, now + 0.01);
+                    gainNode.gain.linearRampToValueAtTime(0, now + 0.5);
+                    osc.connect(gainNode); gainNode.connect(audioContext.destination);
+                    osc.start(now); osc.stop(now + 0.5);
                 }
             }
-
-            function playSample(frequency) {
-                const source = audioContext.createBufferSource();
-                source.buffer = audioBuffer;
-                // Pitch shift by adjusting playback rate relative to the sample's base frequency
-                source.playbackRate.value = frequency / 110.0;
-                source.connect(audioContext.destination);
-                source.start(0);
-            }
-
-            function playSynth(frequency) {
-                const osc = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                const now = audioContext.currentTime;
-
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(frequency, now);
-
-                gainNode.gain.setValueAtTime(0, now);
-                gainNode.gain.linearRampToValueAtTime(0.5, now + 0.01); // Quick attack
-                gainNode.gain.linearRampToValueAtTime(0, now + 0.5);   // Decay
-
-                osc.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                osc.start(now);
-                osc.stop(now + 0.5);
+            function playChord() {
+                if (path.length < 2) return;
+                const play = () => {
+                    const frequencies = path.map(noteIndex => edoNotes[noteIndex].frequency);
+                    frequencies.forEach(freq => playNote(freq));
+                };
+                if (!isAudioInitialized) {
+                    initAudio().then(play);
+                } else {
+                    play();
+                }
             }
 
             // --- Event Handlers ---
@@ -330,44 +312,25 @@
                 isPlayMode = !isPlayMode;
                 playModeBtn.classList.toggle('play-mode-active', isPlayMode);
                 canvas.classList.toggle('play-mode', isPlayMode);
-                rootNoteIndex = currentNoteIndex = null; path = []; // Reset selection when toggling mode
-                updateControls();
-                draw();
+                rootNoteIndex = currentNoteIndex = null; path = [];
+                updateControls(); draw();
             }
-
             function handleCanvasInteraction(e) {
-                if (!isPlayMode) { // Standard mode: set root note
-                    if (rootNoteIndex !== null || isAnimating) return;
-                    const rect = canvas.getBoundingClientRect();
-                    const x = e.clientX - rect.left; const y = e.clientY - rect.top;
-                    for (const [index, note] of edoNotes.entries()) {
-                        if (Math.sqrt((x - note.x)**2 + (y - note.y)**2) < note.hitRadius) {
-                            rootNoteIndex = currentNoteIndex = index; path.push(index); updateControls(); draw(); break;
-                        }
-                    }
-                } else { // Play mode: play notes
+                if (isPlayMode) {
                     const rect = canvas.getBoundingClientRect();
                     const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
                     const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-                    
-                    // Check EDO notes first
-                    for (const note of edoNotes) {
-                        if (Math.sqrt((x - note.x)**2 + (y - note.y)**2) < note.hitRadius) {
-                            playNote(note.frequency); return;
-                        }
-                    }
-                    // Check JI notes if they are visible
-                    if (showRatios) {
-                        for (const note of jiNotes) {
-                           if (Math.sqrt((x - note.ratioX)**2 + (y - note.ratioY)**2) < note.hitRadius) {
-                                playNote(note.frequency); return;
-                           }
-                        }
-                    }
+                    for (const note of edoNotes) { if (Math.sqrt((x - note.x)**2 + (y - note.y)**2) < note.hitRadius) { playNote(note.frequency); return; } }
+                    if (showRatios) { for (const note of jiNotes) { if (Math.sqrt((x - note.ratioX)**2 + (y - note.ratioY)**2) < note.hitRadius) { playNote(note.frequency); return; } } }
+                } else {
+                    if (rootNoteIndex !== null || isAnimating) return;
+                    const rect = canvas.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+                    for (const [index, note] of edoNotes.entries()) { if (Math.sqrt((x - note.x)**2 + (y - note.y)**2) < note.hitRadius) { rootNoteIndex = currentNoteIndex = index; path.push(index); updateControls(); draw(); break; } }
                 }
             }
 
             playModeBtn.addEventListener('click', togglePlayMode);
+            playChordBtn.addEventListener('click', playChord);
             edoInput.addEventListener('change', () => setup()); baseFreqInput.addEventListener('change', () => setup());
             resetBtn.addEventListener('click', () => setup(true)); animateBtn.addEventListener('click', startAnimation);
             toggleRatiosBtn.addEventListener('click', () => { if(!isAnimating) { showRatios = !showRatios; if (!showRatios) showIntervalNames = false; updateControls(); draw(); }});
