@@ -80,4 +80,4 @@ const chords = [
   { edo: 31, name: 'Neutral Major Seventh', steps: [9, 18, 28], aliases: [] },
 ];
 
-module.exports = chords;
+const chordList = chords;
