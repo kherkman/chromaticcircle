@@ -164,7 +164,7 @@
                 const lineLength = canvas.width * 0.8;
                 const lineStartX = canvas.width * 0.1;
                 const lineY = centerY; 
-                const textY = centerY + 60; // Repositioned text
+                const textY = centerY + 60;
 
                 const baseLinePositions = jiNotes.map(note => ({ x: lineStartX + (note.cents / 1200) * lineLength, y: lineY }));
                 const baseCirclePositions = jiNotes.map(note => ({ x: note.ratioX, y: note.ratioY }));
@@ -185,6 +185,23 @@
                     m7Point: animLinePositions[animJiNotes.findIndex(n => n.label === '9/5')]
                 };
 
+                const highlightStages = [
+                    { name: 'SHOW_ROOT', point: animData.rootPoint, text: [`${baseFrequency.toFixed(1)} Hz`, "The root is the 1st harmonic."] },
+                    { name: 'SHOW_OCTAVE', point: animData.octavePoint, text: [`${(baseFrequency * 2).toFixed(1)} Hz`, "The 2nd harmonic is 2 times the root."] },
+                    { name: 'SHOW_PERFECT_FIFTH', point: animData.p5Point, text: ["The 3rd harmonic divided by 2 to keep it in the circle."] },
+                    { name: 'SHOW_FOURTH_HARMONIC', point: animData.octavePoint, text: [`${(baseFrequency * 4).toFixed(1)} Hz`, "The 4th harmonic is 2 times the 2nd harmonic."] },
+                    { name: 'SHOW_PERFECT_FOURTH', point: animData.p4Point, text: ["The 3rd harmonic inverted and multiplied by 4 to be in the circle."] },
+                    { name: 'SHOW_MAJOR_THIRD', point: animData.M3Point, text: [`${(baseFrequency * 5).toFixed(1)} Hz`, "The 5th harmonic is divided by 4 to keep it in the circle."] },
+                    { name: 'SHOW_MINOR_THIRD', point: animData.m3Point, text: ["The interval between the 5th and 6th harmonics, or the 19th harmonic."] },
+                    { name: 'SHOW_DERIVED_M2', point: animData.M2Point, text: ["(3/2) * (3/2) = 9/8,", "or the 9th harmonic divided to be in the circle."], components: [animData.p5Point] },
+                    { name: 'SHOW_DERIVED_M6', point: animData.M6Point, text: ["(5/4) * (4/3) = 5/3"], components: [animData.M3Point, animData.p4Point] },
+                    { name: 'SHOW_DERIVED_m2', point: animData.m2Point, text: ["(4/3) / (5/4) = 16/15"], components: [animData.p4Point, animData.M3Point] },
+                    { name: 'SHOW_DERIVED_M7', point: animData.M7Point, text: ["(5/4) * (3/2) = 15/8"], components: [animData.M3Point, animData.p5Point] },
+                    { name: 'SHOW_DERIVED_TRITONE', point: animData.tritonePoint, text: ["(15/8) * (3/2) = 45/32"], components: [animData.M7Point, animData.p5Point] },
+                    { name: 'SHOW_DERIVED_m6', point: animData.m6Point, text: ["(16/15) * (3/2) = 8/5"], components: [animData.m2Point, animData.p5Point] },
+                    { name: 'SHOW_DERIVED_m7', point: animData.m7Point, text: ["(6/5) * (3/2) = 9/5"], components: [animData.m3Point, animData.p5Point] }
+                ];
+
                 let cumulativeTime = 0;
                 const stageStartTimes = ANIMATION_STAGES.map(s => { const startTime = cumulativeTime; cumulativeTime += s.duration; return startTime; });
                 const startTime = performance.now();
@@ -197,14 +214,14 @@
                     const currentStage = ANIMATION_STAGES[stageIndex];
                     const stageElapsed = elapsed - stageStartTimes[stageIndex];
                     const stageProgress = stageElapsed / currentStage.duration;
-                    drawAnimationFrame(currentStage.name, stageIndex, stageProgress, animData);
+                    drawAnimationFrame(currentStage.name, stageIndex, stageProgress, animData, highlightStages);
 
                     if (elapsed < TOTAL_ANIMATION_DURATION) { requestAnimationFrame(animationLoop); } 
                     else { isAnimating = false; updateControls(); draw(); }
                 });
             }
 
-            function drawAnimationFrame(stageName, stageIndex, progress, data) {
+            function drawAnimationFrame(stageName, stageIndex, progress, data, highlightStages) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 const easedProgress = easeInOut(progress);
 
@@ -231,22 +248,6 @@
                 drawBaseJiLine(interpolatedPoints); 
                 drawJiRatios(interpolatedPoints);
 
-                const highlightStages = [
-                    { name: 'SHOW_ROOT', point: data.rootPoint, text: [`${baseFrequency.toFixed(1)} Hz`, "The root is the 1st harmonic."] },
-                    { name: 'SHOW_OCTAVE', point: data.octavePoint, text: [`${(baseFrequency * 2).toFixed(1)} Hz`, "The 2nd harmonic is 2 times the root."] },
-                    { name: 'SHOW_PERFECT_FIFTH', point: data.p5Point, text: ["The 3rd harmonic divided by 2 to keep it in the circle."] },
-                    { name: 'SHOW_PERFECT_FOURTH', point: data.p4Point, text: ["The 3rd harmonic inverted and multiplied by 4 to be in the circle."] },
-                    { name: 'SHOW_MAJOR_THIRD', point: data.M3Point, text: ["The 5th harmonic is divided by 4 to keep it in the circle."] },
-                    { name: 'SHOW_MINOR_THIRD', point: data.m3Point, text: ["The interval between the 5th and 6th harmonics, or the 19th harmonic."] },
-                    { name: 'SHOW_DERIVED_M2', point: data.M2Point, text: ["(3/2) * (3/2) = 9/8,", "or the 9th harmonic divided to be in the circle."], components: [data.p5Point] },
-                    { name: 'SHOW_DERIVED_M6', point: data.M6Point, text: ["(5/4) * (4/3) = 5/3"], components: [data.M3Point, data.p4Point] },
-                    { name: 'SHOW_DERIVED_m2', point: data.m2Point, text: ["(4/3) / (5/4) = 16/15"], components: [data.p4Point, data.M3Point] },
-                    { name: 'SHOW_DERIVED_M7', point: data.M7Point, text: ["(5/4) * (3/2) = 15/8"], components: [data.M3Point, data.p5Point] },
-                    { name: 'SHOW_DERIVED_TRITONE', point: data.tritonePoint, text: ["(15/8) * (3/2) = 45/32"], components: [data.M7Point, data.p5Point] },
-                    { name: 'SHOW_DERIVED_m6', point: data.m6Point, text: ["(16/15) * (3/2) = 8/5"], components: [data.m2Point, data.p5Point] },
-                    { name: 'SHOW_DERIVED_m7', point: data.m7Point, text: ["(6/5) * (3/2) = 9/5"], components: [data.m3Point, data.p5Point] }
-                ];
-                
                 const clearHighlightsIndex = ANIMATION_STAGES.findIndex(s => s.name === 'CLEAR_HIGHLIGHTS');
                 highlightStages.forEach(hs => {
                     const hsIndex = ANIMATION_STAGES.findIndex(s => s.name === hs.name);
@@ -262,9 +263,6 @@
                     ctx.strokeStyle = 'rgba(255, 100, 100, 0.7)'; ctx.lineWidth = 2; ctx.beginPath();
                     ctx.moveTo(data.octavePoint.x, data.octavePoint.y); ctx.lineTo(data.octavePoint.x + (thirdHarmonicX - data.octavePoint.x) * easedProgress, data.octavePoint.y); ctx.stroke();
                     drawInfoText(`${(baseFrequency * 3).toFixed(1)} Hz`); drawInfoText("The 3rd harmonic is 3 times the root.", 20);
-                } else if (stageName === 'SHOW_FOURTH_HARMONIC') {
-                    drawHighlight(data.octavePoint, easedProgress);
-                    drawInfoText("The 4th harmonic is 2 times the 2nd harmonic.", 20);
                 } else if (stageName === 'CLEAR_HIGHLIGHTS') {
                     const highlightAlpha = 1.0 - easedProgress;
                     highlightStages.forEach(hs => drawHighlight(hs.point, highlightAlpha));
