@@ -74,6 +74,7 @@
         input[type="number"] { width: 60px; }
         input[type="search"] { flex-grow: 1; }
         input[type="range"] { padding: 0; cursor: grab; flex-grow: 1; }
+        input[type="color"] { width: 40px; padding: 2px; height: 30px; border-radius: 4px; }
         select:hover, input:hover, button:hover:not(:disabled) { background-color: #444; border-color: #777; }
         button:disabled, select:disabled, input:disabled { background-color: #222; color: #666; border-color: #444; cursor: not-allowed; }
         .play-mode-active { background-color: #00C853; border-color: #00e676; }
@@ -124,12 +125,15 @@
 
         <div class="control-section" id="ji-section" style="top: 150px; left: 0;">
             <div class="section-header"><h4>Just Intonation</h4><button class="toggle-vis-btn">⠿</button></div>
-            <div class="section-content"><div class="control-group"><button id="toggle-ratios-btn">JI Ratios</button><button id="show-ji-freqs-btn">JI Freqs</button><button id="toggle-names-btn">Names</button><button id="animate-btn">Animate JI</button></div><div class="control-group"><button id="draw-32-btn" disabled>Draw 3/2</button><button id="reset-ji-path-btn" disabled>Reset JI</button><label for="ji-zoom-slider">JI Zoom:</label> <input type="range" id="ji-zoom-slider" min="0.5" max="2" step="0.01" value="1"></div></div>
+            <div class="section-content"><div class="control-group"><button id="toggle-ratios-btn">JI Ratios</button><button id="show-ji-freqs-btn">JI Freqs</button><button id="toggle-names-btn">Names</button><button id="animate-btn">Animate JI</button></div><div class="control-group"><button id="draw-32-btn" disabled>Draw 3/2</button><button id="reset-ji-path-btn" disabled>Reset JI</button><label for="ji-zoom-slider">JI Zoom:</label> <input type="range" id="ji-zoom-slider" min="0.5" max="2" step="0.01" value="1"></div>
+            <div class="control-group"><input type="color" id="ji-color-input" value="#6495ED"><label for="ji-line-thickness">Line:</label><input type="number" id="ji-line-thickness" value="2" min="0.5" step="0.5"><label for="ji-font-size">Font:</label><input type="number" id="ji-font-size" value="12" min="1"></div></div>
         </div>
         
         <div class="control-section" id="playback-section" style="top: 315px; left: 0;">
              <div class="section-header"><h4>Playback & Intervals</h4><button class="toggle-vis-btn">⠿</button></div>
-            <div class="section-content"><div class="control-group"><label for="interval-select">Interval:</label> <select id="interval-select" disabled></select><button id="add-interval-btn" disabled>Add</button><button id="reset-edo-path-btn">Reset Path</button></div><div class="control-group"><button id="roll-left-btn">Roll Left</button><button id="roll-right-btn">Roll Right</button></div><div class="control-group"><button id="play-mode-btn">Play Mode</button><button id="play-chord-btn" disabled>Play Chord</button><button id="play-scale-btn" disabled>Play Scale</button></div><div class="control-group"><label for="volume-slider">Volume:</label><input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5"></div></div>
+            <div class="section-content"><div class="control-group"><label for="interval-select">Interval:</label> <select id="interval-select" disabled></select><button id="add-interval-btn" disabled>Add</button><button id="reset-edo-path-btn">Reset Path</button></div><div class="control-group"><button id="roll-left-btn">Roll Left</button><button id="roll-right-btn">Roll Right</button></div>
+            <div class="control-group"><input type="color" id="edo-color-input" value="#CCCCCC"><label for="edo-line-thickness">Line:</label><input type="number" id="edo-line-thickness" value="1.5" min="0.5" step="0.5"><label for="edo-font-size">Font:</label><input type="number" id="edo-font-size" value="11" min="1"></div>
+            <div class="control-group"><button id="play-mode-btn">Play Mode</button><button id="play-chord-btn" disabled>Play Chord</button><button id="play-scale-btn" disabled>Play Scale</button></div><div class="control-group"><label for="volume-slider">Volume:</label><input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5"></div></div>
         </div>
 
         <div class="control-section" id="scale-section" style="top: 0px; left: 400px;">
@@ -143,6 +147,7 @@
                     <button id="play-library-scale-btn">Play Scale</button>
                     <button id="scale-info-btn">Scale Info</button>
                 </div>
+                <div class="control-group"><input type="color" id="scale-color-input" value="#28a745"><label for="scale-line-thickness">Line:</label><input type="number" id="scale-line-thickness" value="2.5" min="0.5" step="0.5"><label for="scale-font-size">Font:</label><input type="number" id="scale-font-size" value="11" min="1"></div>
             </div>
         </div>
 
@@ -156,6 +161,7 @@
                     <button id="roll-chord-right-btn">Roll Right</button>
                     <button id="play-library-chord-btn">Play Chord</button>
                 </div>
+                <div class="control-group"><input type="color" id="chord-color-input" value="#ff4136"><label for="chord-line-thickness">Line:</label><input type="number" id="chord-line-thickness" value="3" min="0.5" step="0.5"><label for="chord-font-size">Font:</label><input type="number" id="chord-font-size" value="11" min="1"></div>
             </div>
         </div>
     </div>
@@ -196,6 +202,10 @@
             const playLibraryScaleBtn = document.getElementById('play-library-scale-btn'), scaleInfoBtn = document.getElementById('scale-info-btn'), scaleInfoDisplay = document.getElementById('scale-info-display');
             const chordSearchInput = document.getElementById('chord-search'), chordSelect = document.getElementById('chord-select');
             const rollChordLeftBtn = document.getElementById('roll-chord-left-btn'), rollChordRightBtn = document.getElementById('roll-chord-right-btn'), playLibraryChordBtn = document.getElementById('play-library-chord-btn');
+            const jiColorInput = document.getElementById('ji-color-input'), jiLineThicknessInput = document.getElementById('ji-line-thickness'), jiFontSizeInput = document.getElementById('ji-font-size');
+            const edoColorInput = document.getElementById('edo-color-input'), edoLineThicknessInput = document.getElementById('edo-line-thickness'), edoFontSizeInput = document.getElementById('edo-font-size');
+            const scaleColorInput = document.getElementById('scale-color-input'), scaleLineThicknessInput = document.getElementById('scale-line-thickness'), scaleFontSizeInput = document.getElementById('scale-font-size');
+            const chordColorInput = document.getElementById('chord-color-input'), chordLineThicknessInput = document.getElementById('chord-line-thickness'), chordFontSizeInput = document.getElementById('chord-font-size');
 
             // --- State Variables ---
             let edo = 12, rootNoteIndex = null, currentNoteIndex = null, edoZoom = 1, jiZoom = 1, baseFrequency = 110, masterVolume = 0.5;
@@ -206,16 +216,28 @@
             let showRatios = false, showIntervalNames = false, showEdoFreqs = false, showJiFreqs = false, showScaleInfo = false;
             let audioContext, audioBuffer = null, masterGainNode;
             let animationFrameId = null, isPaused = false, startTime = 0, pausedTime = 0;
-            
+            // Visual Customization State
+            let jiColor = '#6495ED', jiLineWidth = 2, jiFontSize = 12;
+            let edoPathColor = '#CCCCCC', edoPathLineWidth = 1.5, edoFreqFontSize = 11;
+            let scalePathColor = '#28a745', scalePathLineWidth = 2.5, scaleModeFontSize = 11;
+            let chordPathColor = '#ff4136', chordPathLineWidth = 3, chordIntervalFontSize = 11;
+
             // --- Libraries & Constants ---
-            // Base libraries are defined, then extended with external files.
-            let scaleLibrary = [ { edo: 12, name: 'Ionian (Major)', steps: [2, 2, 1, 2, 2, 2, 1], aliases: ['G.Lydian', 'M.Hypolydian', 'Major', 'Bilaval That', 'Mela Shankarabharanam', 'Raga Atana', 'Begada', 'Kathanakuthuhalam', 'Ghana Heptatonic', 'Peruvian Major', 'Matzore', 'Rast ascending: Greece', '4th plagal Byzantine', 'Ararai: Ethiopia', 'Makam Cargah', 'Ajam Ashiran', 'Dastgah-e Mahur', 'Dastgah-e Rast Panjgah', 'Xin: China', 'DS2', 'Heptatonia prima'] }, { edo: 12, name: 'Dorian', steps: [2, 1, 2, 2, 2, 1, 2], aliases: ['M.Dorian', 'G.Phrygian', 'M.Hypomixolydian', 'G.M.Hypoionian (Hypoiastian)', 'Kafi That', 'Mela Kharaharapriya', 'Raga Bageshri', 'Bhimpalasi', 'Dhanasri', 'Huseni', 'Kanara', 'Kannada Gowlai', 'Kapi', 'Nayaki Kanada', 'Raisa Kanada', 'Ritigaula', 'Shahana', 'Sriraga', 'Mischung 5', 'Gregorian nr.8', 'Eskimo Heptatonic', 'Yu: China', 'Hyojo', 'Oshikicho', 'Banshikicho: Japan', 'Nam: Vietnam'] }, { edo: 12, name: 'Phrygian', steps: [1, 2, 2, 2, 1, 2, 2], aliases: ['M.Phrygian', 'G.Dorian', 'G.M.Hypoaeolian', 'Bhairavi That', 'Mela Hanumatodi', 'Raga Asavari (Asaveri)', 'Bilashkhani Todi', 'Darjeeling', 'Ghanta', 'Makam Kurd', 'Gregorian nr.3', 'Escala Andaluza', 'In', 'Zokuso: Japan', 'Ousak: Greece', 'Major inverse'] }, { edo: 12, name: 'Lydian', steps: [2, 2, 2, 1, 2, 2, 1], aliases: ['M.Lydian', 'G.Hypolydian', 'G.M.Hypolocrian', 'Rut biscale ascending', 'Kalyan That (Yaman)', 'Mela Mecakalyani', 'Raga Chandrakant', 'Malarani', 'Shuddh Kalyan', 'Ping', 'Kung', 'Gu: China'] }, { edo: 12, name: 'Mixolydian', steps: [2, 2, 1, 2, 2, 1, 2], aliases: ['M.Mixolydian', 'G.Hypophrygian', 'G.Ionian (Iastian)', 'G.M.Hypoionian', 'Hypermixolydian', 'Mischung 3', 'Khamaj That', 'Mela Harikambhoji', 'Raga Balahamsa', 'Bhim', 'Devamanohari', 'Gaoti', 'Harini', 'Janjhuti', 'Kaamaai', 'Kalashri', 'Khambhavati', 'Sahana', 'Sakh', 'Surati', 'Gregorian nr.7', 'Enharmonic Byzantine Liturgical', 'Rast descending: Greece', 'Ching', 'Shang: China'] }, { edo: 12, name: 'Aeolian (Natural Minor)', steps: [2, 1, 2, 2, 1, 2, 2], aliases: ['G.M.Aeolian', 'G.M.Hypodorian', 'G.Hyperphrygian', 'Natural Minor', 'Melodic Minor descending', 'Asavari That', 'Mela Natabhairavi', 'Raga Jaunpuri', 'Adana', 'Darbari', 'Dhanyasi', 'Jingla', 'Sampurna Malkauns', 'Gregorian nr.2', 'Makam Buselik', 'Nihavend', 'Peruvian Minor', 'Se', 'Chiao: China', 'Geez', 'Ezel: Ethiopia', 'Kiourdi descending: Greece', 'Cushak: Armenia'] }, { edo: 12, name: 'Locrian', steps: [1, 2, 2, 1, 2, 2, 2], aliases: ['M.Locrian', 'G.Mixolydian', 'G.Hyperdorian', 'M.Hypophrygian', 'G.M.Hyperaeolian', 'Rut biscale descending', 'Pien chih: China', 'Makam Lami', 'Raga Meladalan', 'Yishtabach: Jewish'] }, ];
-            let chordLibrary = [ { edo: 12, name: 'Major', steps: [4, 7], aliases: [] }, { edo: 12, name: 'Minor', steps: [3, 7], aliases: [] }, { edo: 24, name: 'Neutral', steps: [7, 14], aliases: [] }, ];
-
-            // Merge external libraries if they exist
-            if (typeof scalesList !== 'undefined') { scaleLibrary.push(...scalesList); }
-            if (typeof chordList !== 'undefined') { chordLibrary.push(...chordList); }
-
+            let scaleLibrary = [], chordLibrary = [];
+            
+            function initializeLibraries() {
+                const internalScales = [ { edo: 12, name: 'Ionian (Major)', steps: [2, 2, 1, 2, 2, 2, 1], aliases: ['G.Lydian', 'M.Hypolydian', 'Major', 'Bilaval That', 'Mela Shankarabharanam', 'Raga Atana', 'Begada', 'Kathanakuthuhalam', 'Ghana Heptatonic', 'Peruvian Major', 'Matzore', 'Rast ascending: Greece', '4th plagal Byzantine', 'Ararai: Ethiopia', 'Makam Cargah', 'Ajam Ashiran', 'Dastgah-e Mahur', 'Dastgah-e Rast Panjgah', 'Xin: China', 'DS2', 'Heptatonia prima'] }, { edo: 12, name: 'Dorian', steps: [2, 1, 2, 2, 2, 1, 2], aliases: ['M.Dorian', 'G.Phrygian', 'M.Hypomixolydian', 'G.M.Hypoionian (Hypoiastian)', 'Kafi That', 'Mela Kharaharapriya', 'Raga Bageshri', 'Bhimpalasi', 'Dhanasri', 'Huseni', 'Kanara', 'Kannada Gowlai', 'Kapi', 'Nayaki Kanada', 'Raisa Kanada', 'Ritigaula', 'Shahana', 'Sriraga', 'Mischung 5', 'Gregorian nr.8', 'Eskimo Heptatonic', 'Yu: China', 'Hyojo', 'Oshikicho', 'Banshikicho: Japan', 'Nam: Vietnam'] }, { edo: 12, name: 'Phrygian', steps: [1, 2, 2, 2, 1, 2, 2], aliases: ['M.Phrygian', 'G.Dorian', 'G.M.Hypoaeolian', 'Bhairavi That', 'Mela Hanumatodi', 'Raga Asavari (Asaveri)', 'Bilashkhani Todi', 'Darjeeling', 'Ghanta', 'Makam Kurd', 'Gregorian nr.3', 'Escala Andaluza', 'In', 'Zokuso: Japan', 'Ousak: Greece', 'Major inverse'] }, { edo: 12, name: 'Lydian', steps: [2, 2, 2, 1, 2, 2, 1], aliases: ['M.Lydian', 'G.Hypolydian', 'G.M.Hypolocrian', 'Rut biscale ascending', 'Kalyan That (Yaman)', 'Mela Mecakalyani', 'Raga Chandrakant', 'Malarani', 'Shuddh Kalyan', 'Ping', 'Kung', 'Gu: China'] }, { edo: 12, name: 'Mixolydian', steps: [2, 2, 1, 2, 2, 1, 2], aliases: ['M.Mixolydian', 'G.Hypophrygian', 'G.Ionian (Iastian)', 'G.M.Hypoionian', 'Hypermixolydian', 'Mischung 3', 'Khamaj That', 'Mela Harikambhoji', 'Raga Balahamsa', 'Bhim', 'Devamanohari', 'Gaoti', 'Harini', 'Janjhuti', 'Kaamaai', 'Kalashri', 'Khambhavati', 'Sahana', 'Sakh', 'Surati', 'Gregorian nr.7', 'Enharmonic Byzantine Liturgical', 'Rast descending: Greece', 'Ching', 'Shang: China'] }, { edo: 12, name: 'Aeolian (Natural Minor)', steps: [2, 1, 2, 2, 1, 2, 2], aliases: ['G.M.Aeolian', 'G.M.Hypodorian', 'G.Hyperphrygian', 'Natural Minor', 'Melodic Minor descending', 'Asavari That', 'Mela Natabhairavi', 'Raga Jaunpuri', 'Adana', 'Darbari', 'Dhanyasi', 'Jingla', 'Sampurna Malkauns', 'Gregorian nr.2', 'Makam Buselik', 'Nihavend', 'Peruvian Minor', 'Se', 'Chiao: China', 'Geez', 'Ezel: Ethiopia', 'Kiourdi descending: Greece', 'Cushak: Armenia'] }, { edo: 12, name: 'Locrian', steps: [1, 2, 2, 1, 2, 2, 2], aliases: ['M.Locrian', 'G.Mixolydian', 'G.Hyperdorian', 'M.Hypophrygian', 'G.M.Hyperaeolian', 'Rut biscale descending', 'Pien chih: China', 'Makam Lami', 'Raga Meladalan', 'Yishtabach: Jewish'] }, ];
+                const internalChords = [ { edo: 12, name: 'Major', steps: [4, 7], aliases: [] }, { edo: 12, name: 'Minor', steps: [3, 7], aliases: [] }, { edo: 24, name: 'Neutral', steps: [7, 14], aliases: [] }, ];
+                scaleLibrary = (typeof scalesList !== 'undefined') ? [...internalScales, ...scalesList] : internalScales;
+                chordLibrary = (typeof chordList !== 'undefined') ? [...internalChords, ...chordList] : internalChords;
+            }
+            function addMappedChords() {
+                const multiplier = edo / 12.0;
+                const mappedMajor = { edo: edo, name: 'Major (12-EDO mapped)', steps: [4, 7].map(s => Math.round(s * multiplier)), aliases: ['mapped'] };
+                const mappedMinor = { edo: edo, name: 'Minor (12-EDO mapped)', steps: [3, 7].map(s => Math.round(s * multiplier)), aliases: ['mapped'] };
+                chordLibrary.unshift(mappedMinor);
+                chordLibrary.unshift(mappedMajor);
+            }
             const INTERVAL_NAMES_12_EDO = { 0: "R", 1: "m2", 2: "M2", 3: "m3", 4: "M3", 5: "P4", 6: "d5", 7: "P5", 8: "m6", 9: "M6", 10: "m7", 11: "M7"};
             const JI_PERFECT_FIFTH_RADIANS = 210.59 * (Math.PI / 180);
             const JUST_INTONATION_RATIOS = [ { label: '1/1', value: 1/1, name: 'Unison' }, { label: '16/15', value: 16/15, name: 'm2' }, { label: '9/8', value: 9/8, name: 'M2' }, { label: '6/5', value: 6/5, name: 'm3' }, { label: '5/4', value: 5/4, name: 'M3' }, { label: '4/3', value: 4/3, name: 'P4' }, { label: '45/32', value: 45/32, name: 'Tritone' }, { label: '3/2', value: 3/2, name: 'P5' }, { label: '8/5', value: 8/5, name: 'm6' }, { label: '5/3', value: 5/3, name: 'M6' }, { label: '9/5', value: 9/5, name: 'm7' }, { label: '15/8', value: 15/8, name: 'M7' } ].sort((a, b) => a.value - b.value);
@@ -225,7 +247,15 @@
             // --- App Logic Functions ---
             function resizeAndRecalculate() { const canvasSize = Math.min(window.innerWidth, window.innerHeight); canvas.width = canvasSize; canvas.height = canvasSize; centerX = canvas.width / 2; centerY = canvas.height / 2; baseCircleRadius = canvas.width * 0.22; updateAllRadii(); }
             function updateAllRadii() { circleRadius = baseCircleRadius * edoZoom; edoFreqLabelRadius = circleRadius * 1.30; ratioLabelRadius = circleRadius * 1.60 * jiZoom; jiFreqLabelRadius = circleRadius * 1.90 * jiZoom; nameLabelRadius = circleRadius * 2.20 * jiZoom; let scaleNameRadius = circleRadius * 1.45; noteRadius = Math.max(9, canvas.width / 50); }
-            function setup() { isAnimating = false; showScaleInfo = false; let newEdo = parseInt(edoInput.value, 10); if (isNaN(newEdo) || newEdo < 1) newEdo = 12; if (newEdo > 360) newEdo = 360; edoInput.value = newEdo; edo = newEdo; let newFreq = parseFloat(baseFreqInput.value); if (isNaN(newFreq) || newFreq <= 0) newFreq = 110; baseFreqInput.value = newFreq; baseFrequency = newFreq; rootNoteIndex = currentNoteIndex = null; path = []; jiPath = []; selectedScaleSteps = null; selectedScalePath = []; selectedChordSteps = null; selectedChordPath = []; populateScaleSelect(); populateChordSelect(); resizeAndRecalculate(); generateAllNotes(); updateControls(); updateScaleInfoDisplay(); draw(); }
+            function setup() {
+                initializeLibraries();
+                isAnimating = false; showScaleInfo = false;
+                let newEdo = parseInt(edoInput.value, 10); if (isNaN(newEdo) || newEdo < 1) newEdo = 12; if (newEdo > 360) newEdo = 360; edoInput.value = newEdo; edo = newEdo;
+                let newFreq = parseFloat(baseFreqInput.value); if (isNaN(newFreq) || newFreq <= 0) newFreq = 110; baseFreqInput.value = newFreq; baseFrequency = newFreq;
+                rootNoteIndex = currentNoteIndex = null; path = []; jiPath = []; selectedScaleSteps = null; selectedScalePath = []; selectedChordSteps = null; selectedChordPath = []; 
+                addMappedChords();
+                populateScaleSelect(); populateChordSelect(); resizeAndRecalculate(); generateAllNotes(); updateControls(); updateScaleInfoDisplay(); draw();
+            }
             function setDefaultRootNote() { if (isAnimating || isPlayMode) return; rootNoteIndex = currentNoteIndex = 0; path = [0]; jiPath = []; updateControls(); draw(); }
             function resetEdoPath() { if (rootNoteIndex !== null) { path = [rootNoteIndex]; currentNoteIndex = rootNoteIndex; } detectUserScale(); updateControls(); draw(); }
             function resetJiPath() { jiPath = []; updateControls(); draw(); }
@@ -235,12 +265,12 @@
             function generateJINotes() { jiNotes = JUST_INTONATION_RATIOS.map(ratio => { const cents = 1200 * Math.log2(ratio.value); const angle = (cents / 1200) * 2 * Math.PI - Math.PI / 2; const freq = baseFrequency * ratio.value; return { ratioX: centerX + ratioLabelRadius * Math.cos(angle), ratioY: centerY + ratioLabelRadius * Math.sin(angle), freqX: centerX + jiFreqLabelRadius * Math.cos(angle), freqY: centerY + jiFreqLabelRadius * Math.sin(angle), nameX: centerX + nameLabelRadius * Math.cos(angle), nameY: centerY + nameLabelRadius * Math.sin(angle), label: ratio.label, name: ratio.name, cents, frequency: freq, hitRadius: 15 }; }); }
             function draw() { ctx.clearRect(0, 0, canvas.width, canvas.height); drawMainCircle(); if (showEdoFreqs) drawEdoFrequencies(); if (showRatios) drawRatios(); if (showJiFreqs) drawJiFrequencies(); if (showIntervalNames) drawIntervalNames(); drawScalePath(); drawChordPath(); drawConnectingLines(); drawJiPath(); drawEDONotes(); drawScaleModeNames(); drawChordIntervalNames(); }
             function drawMainCircle() { ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(centerX, centerY, circleRadius, 0, 2 * Math.PI); ctx.stroke(); }
-            function drawEdoFrequencies() { ctx.fillStyle = '#FFFFFF'; ctx.font = '11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; edoNotes.forEach(note => ctx.fillText(`${note.frequency.toFixed(1)}Hz`, note.freqX, note.freqY)); }
-            function drawRatios() { ctx.fillStyle = '#6495ED'; ctx.font = '12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; jiNotes.forEach(note => ctx.fillText(note.label, note.ratioX, note.ratioY)); }
-            function drawJiFrequencies() { ctx.fillStyle = '#6495ED'; ctx.font = '11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; jiNotes.forEach(note => ctx.fillText(`${note.frequency.toFixed(1)}Hz`, note.freqX, note.freqY)); }
-            function drawIntervalNames() { ctx.fillStyle = '#6495ED'; ctx.font = '11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; jiNotes.forEach(note => ctx.fillText(note.name, note.nameX, note.nameY)); }
-            function drawConnectingLines() { if (path.length <= 1) return; ctx.strokeStyle = '#CCCCCC'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(edoNotes[path[0]].x, edoNotes[path[0]].y); path.slice(1).forEach(index => ctx.lineTo(edoNotes[index].x, edoNotes[index].y)); ctx.stroke(); }
-            function drawJiPath() { if (jiPath.length <= 1) return; ctx.strokeStyle = '#6495ED'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(jiPath[0].x, jiPath[0].y); jiPath.slice(1).forEach(point => ctx.lineTo(point.x, point.y)); ctx.stroke(); }
+            function drawEdoFrequencies() { ctx.fillStyle = '#FFFFFF'; ctx.font = `${edoFreqFontSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; edoNotes.forEach(note => ctx.fillText(`${note.frequency.toFixed(1)}Hz`, note.freqX, note.freqY)); }
+            function drawRatios() { ctx.fillStyle = jiColor; ctx.font = `${jiFontSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; jiNotes.forEach(note => ctx.fillText(note.label, note.ratioX, note.ratioY)); }
+            function drawJiFrequencies() { ctx.fillStyle = jiColor; ctx.font = `${jiFontSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; jiNotes.forEach(note => ctx.fillText(`${note.frequency.toFixed(1)}Hz`, note.freqX, note.freqY)); }
+            function drawIntervalNames() { ctx.fillStyle = jiColor; ctx.font = `${jiFontSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; jiNotes.forEach(note => ctx.fillText(note.name, note.nameX, note.nameY)); }
+            function drawConnectingLines() { if (path.length <= 1) return; ctx.strokeStyle = edoPathColor; ctx.lineWidth = edoPathLineWidth; ctx.beginPath(); ctx.moveTo(edoNotes[path[0]].x, edoNotes[path[0]].y); path.slice(1).forEach(index => ctx.lineTo(edoNotes[index].x, edoNotes[index].y)); ctx.stroke(); }
+            function drawJiPath() { if (jiPath.length <= 1) return; ctx.strokeStyle = jiColor; ctx.lineWidth = jiLineWidth; ctx.beginPath(); ctx.moveTo(jiPath[0].x, jiPath[0].y); jiPath.slice(1).forEach(point => ctx.lineTo(point.x, point.y)); ctx.stroke(); }
             function drawEDONotes() {
                 edoNotes.forEach((note, index) => {
                     ctx.beginPath();
@@ -259,12 +289,12 @@
                     ctx.fillText(note.label, note.x, note.y);
                 });
             }
-            function drawScalePath() { if (selectedScalePath.length <= 1) return; ctx.strokeStyle = '#28a745'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(edoNotes[selectedScalePath[0]].x, edoNotes[selectedScalePath[0]].y); selectedScalePath.slice(1).forEach(index => ctx.lineTo(edoNotes[index].x, edoNotes[index].y)); ctx.lineTo(edoNotes[selectedScalePath[0]].x, edoNotes[selectedScalePath[0]].y); ctx.stroke(); }
-            function drawScaleModeNames() { const scaleNameRadius = circleRadius * 1.45; ctx.fillStyle = '#28a745'; ctx.font = '11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; selectedScalePath.forEach((noteIndex, i) => { if (scaleModeNames[i]) { const note = edoNotes[noteIndex]; const angle = note.angle; const x = centerX + scaleNameRadius * Math.cos(angle); const y = centerY + scaleNameRadius * Math.sin(angle); ctx.fillText(scaleModeNames[i], x, y); } }); }
+            function drawScalePath() { if (selectedScalePath.length <= 1) return; ctx.strokeStyle = scalePathColor; ctx.lineWidth = scalePathLineWidth; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(edoNotes[selectedScalePath[0]].x, edoNotes[selectedScalePath[0]].y); selectedScalePath.slice(1).forEach(index => ctx.lineTo(edoNotes[index].x, edoNotes[index].y)); ctx.lineTo(edoNotes[selectedScalePath[0]].x, edoNotes[selectedScalePath[0]].y); ctx.stroke(); }
+            function drawScaleModeNames() { const scaleNameRadius = circleRadius * 1.45; ctx.fillStyle = scalePathColor; ctx.font = `${scaleModeFontSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; selectedScalePath.forEach((noteIndex, i) => { if (scaleModeNames[i]) { const note = edoNotes[noteIndex]; const angle = note.angle; const x = centerX + scaleNameRadius * Math.cos(angle); const y = centerY + scaleNameRadius * Math.sin(angle); ctx.fillText(scaleModeNames[i], x, y); } }); }
             function drawChordPath() {
                 if (selectedChordPath.length <= 1) return;
-                ctx.strokeStyle = '#ff4136'; // Red color
-                ctx.lineWidth = 3;
+                ctx.strokeStyle = chordPathColor;
+                ctx.lineWidth = chordPathLineWidth;
                 ctx.lineCap = 'round';
                 ctx.beginPath();
                 const firstNote = edoNotes[selectedChordPath[0]];
@@ -276,7 +306,7 @@
                 ctx.lineTo(firstNote.x, firstNote.y);
                 ctx.stroke();
             }
-            function drawChordIntervalNames() { const nameRadius = circleRadius * 1.15; ctx.fillStyle = '#ff4136'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; selectedChordPath.forEach((noteIndex, i) => { if (chordIntervalNames[i]) { const note = edoNotes[noteIndex]; const angle = note.angle; const x = centerX + nameRadius * Math.cos(angle); const y = centerY + nameRadius * Math.sin(angle); ctx.fillText(chordIntervalNames[i], x, y); } }); }
+            function drawChordIntervalNames() { const nameRadius = circleRadius * 1.15; ctx.fillStyle = chordPathColor; ctx.font = `bold ${chordIntervalFontSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; selectedChordPath.forEach((noteIndex, i) => { if (chordIntervalNames[i]) { const note = edoNotes[noteIndex]; const angle = note.angle; const x = centerX + nameRadius * Math.cos(angle); const y = centerY + nameRadius * Math.sin(angle); ctx.fillText(chordIntervalNames[i], x, y); } }); }
             function updateControls() {
                 const hasRoot = currentNoteIndex !== null; const pathIsPlayable = path.length >= 2; const jiPathIsPlayable = jiPath.length > 0; const scaleIsSelected = selectedScalePath.length > 0; const chordIsSelected = selectedChordPath.length > 0;
                 allFloatingControls.forEach(el => el.disabled = isAnimating || isPlayingScale);
@@ -415,8 +445,21 @@
             rollChordLeftBtn.addEventListener('click', () => rollChordPath(-1));
             rollChordRightBtn.addEventListener('click', () => rollChordPath(1));
             playLibraryChordBtn.addEventListener('click', playLibraryChord);
-            
+            jiColorInput.addEventListener('input', (e) => { jiColor = e.target.value; draw(); });
+            jiLineThicknessInput.addEventListener('input', (e) => { jiLineWidth = parseFloat(e.target.value); draw(); });
+            jiFontSizeInput.addEventListener('input', (e) => { jiFontSize = parseInt(e.target.value, 10); draw(); });
+            edoColorInput.addEventListener('input', (e) => { edoPathColor = e.target.value; draw(); });
+            edoLineThicknessInput.addEventListener('input', (e) => { edoPathLineWidth = parseFloat(e.target.value); draw(); });
+            edoFontSizeInput.addEventListener('input', (e) => { edoFreqFontSize = parseInt(e.target.value, 10); draw(); });
+            scaleColorInput.addEventListener('input', (e) => { scalePathColor = e.target.value; draw(); });
+            scaleLineThicknessInput.addEventListener('input', (e) => { scalePathLineWidth = parseFloat(e.target.value); draw(); });
+            scaleFontSizeInput.addEventListener('input', (e) => { scaleModeFontSize = parseInt(e.target.value, 10); draw(); });
+            chordColorInput.addEventListener('input', (e) => { chordPathColor = e.target.value; draw(); });
+            chordLineThicknessInput.addEventListener('input', (e) => { chordPathLineWidth = parseFloat(e.target.value); draw(); });
+            chordFontSizeInput.addEventListener('input', (e) => { chordIntervalFontSize = parseInt(e.target.value, 10); draw(); });
+
             // Initial setup
+            initializeLibraries();
             setup();
             setDefaultRootNote();
             initializeControlPanels();
