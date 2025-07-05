@@ -6,9 +6,12 @@
     <title>Interactive Chromatic Circle</title>
     <style>
         html, body {
-            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+            margin: 0; padding: 0; width: 100%; height: 100%; /* overflow: hidden; */ /* Allow pinch-to-zoom on touch devices */
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #000000; color: #FFFFFF;
+            /* Added for page zoom slider */
+            transform-origin: center center;
+            transition: transform 0.1s ease-out;
         }
         
         #canvas-container {
@@ -20,14 +23,13 @@
             align-items: center;
         }
 
-        /* --- CORRECTED/NEW STYLES --- */
         #chromaticCircleCanvas {
             position: relative; /* Make z-index work */
             z-index: 2; /* Ensure canvas is on top */
+            cursor: grab; /* Indicate pannable */
         }
         #chromaticCircleCanvas.play-mode { cursor: pointer; }
-        /* --- END CORRECTIONS --- */
-
+        
         #controls-wrapper {
             position: absolute;
             top: 10px;
@@ -168,40 +170,44 @@
     </div>
 
     <div id="controls-wrapper">
-        <div class="control-section" id="edo-section" style="top: 0; left: 0;">
+        <div class="control-section" id="edo-section" style="top: 0px; left: 0;">
             <div class="section-header"><h4>EDO Settings</h4><button class="toggle-vis-btn">⠿</button></div>
-            <div class="section-content">
+            <div class="section-content hidden">
                 <div class="control-group"><label for="base-freq-input">Base Hz:</label> <input type="number" id="base-freq-input" value="110" min="1"><label for="edo-input">EDO:</label> <input type="number" id="edo-input" value="12" min="1" max="360"><button id="show-edo-freqs-btn">EDO Freqs</button></div>
                 <div class="control-group"><label for="edo-zoom-slider">EDO Zoom:</label> <input type="range" id="edo-zoom-slider" min="0.5" max="2" step="0.01" value="1"></div>
+                <div class="control-group">
+                    <label for="page-zoom-slider">Page Zoom:</label>
+                    <input type="range" id="page-zoom-slider" min="0.4" max="2.0" step="0.01" value="0.8">
+                </div>
                 <div class="control-group" style="border-top: 1px solid #333; padding-top: 10px;">
-                    <label for="glow-toggle">Visual Glow:</label> <input type="checkbox" id="glow-toggle">
+                    <label for="glow-toggle">Visual Glow:</label> <input type="checkbox" id="glow-toggle" checked>
                     <label for="glow-color">Color:</label> <input type="color" id="glow-color" value="#ff00f2" disabled>
                 </div>
                 <div class="control-group">
-                    <label for="glow-intensity">Intensity:</label> <input type="range" id="glow-intensity" min="0.5" max="2.0" step="0.1" value="1.0" disabled>
+                    <label for="glow-intensity">Intensity:</label> <input type="range" id="glow-intensity" min="0.5" max="2.0" step="0.1" value="2.0" disabled>
                 </div>
                 <div class="control-group">
-                    <label for="glow-thickness">Thickness:</label> <input type="range" id="glow-thickness" min="2" max="20" step="1" value="10" disabled>
+                    <label for="glow-thickness">Thickness:</label> <input type="range" id="glow-thickness" min="2" max="20" step="1" value="2" disabled>
                 </div>
             </div>
         </div>
 
-        <div class="control-section" id="ji-section" style="top: 315px; left: 0;">
-            <div class="section-header"><h4>Just Intonation</h4><button class="toggle-vis-btn">⠿</button></div>
-            <div class="section-content"><div class="control-group"><button id="toggle-ratios-btn">JI Ratios</button><button id="show-ji-freqs-btn">JI Freqs</button><button id="toggle-names-btn">Names</button><button id="animate-btn">Animate JI</button></div><div class="control-group"><button id="draw-32-btn" disabled>Draw 3/2</button><button id="reset-ji-path-btn" disabled>Reset JI</button><label for="ji-zoom-slider">JI Zoom:</label> <input type="range" id="ji-zoom-slider" min="0.5" max="2" step="0.01" value="1"></div>
-            <div class="control-group"><input type="color" id="ji-color-input" value="#6495ED"><label for="ji-line-thickness">Line:</label><input type="number" id="ji-line-thickness" value="2" min="0.5" step="0.5"><label for="ji-font-size">Font:</label><input type="number" id="ji-font-size" value="12" min="1"></div></div>
-        </div>
-        
-        <div class="control-section" id="playback-section" style="top: 480px; left: 0;">
+        <div class="control-section" id="playback-section" style="top: 50px; left: 0;">
              <div class="section-header"><h4>Playback & Intervals</h4><button class="toggle-vis-btn">⠿</button></div>
-            <div class="section-content"><div class="control-group"><label for="interval-select">Interval:</label> <select id="interval-select" disabled></select><button id="add-interval-btn" disabled>Add</button><button id="reset-edo-path-btn">Reset Path</button></div><div class="control-group"><button id="roll-left-btn">Roll Left</button><button id="roll-right-btn">Roll Right</button></div>
+            <div class="section-content hidden"><div class="control-group"><label for="interval-select">Interval:</label> <select id="interval-select" disabled></select><button id="add-interval-btn" disabled>Add</button><button id="reset-edo-path-btn">Reset Path</button></div><div class="control-group"><button id="roll-left-btn">Roll Left</button><button id="roll-right-btn">Roll Right</button></div>
             <div class="control-group"><input type="color" id="edo-color-input" value="#CCCCCC"><label for="edo-line-thickness">Line:</label><input type="number" id="edo-line-thickness" value="1.5" min="0.5" step="0.5"><label for="edo-font-size">Font:</label><input type="number" id="edo-font-size" value="11" min="1"></div>
             <div class="control-group"><button id="play-mode-btn">Play Mode</button><button id="play-chord-btn" disabled>Play Chord</button><button id="play-scale-btn" disabled>Play Scale</button></div><div class="control-group"><label for="volume-slider">Volume:</label><input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5"></div></div>
         </div>
 
-        <div class="control-section" id="scale-section" style="top: 0px; left: 400px;">
+        <div class="control-section" id="ji-section" style="top: 100px; left: 0;">
+            <div class="section-header"><h4>Just Intonation</h4><button class="toggle-vis-btn">⠿</button></div>
+            <div class="section-content hidden"><div class="control-group"><button id="toggle-ratios-btn">JI Ratios</button><button id="show-ji-freqs-btn">JI Freqs</button><button id="toggle-names-btn">Names</button><button id="animate-btn">Animate JI</button></div><div class="control-group"><button id="draw-32-btn" disabled>Draw 3/2</button><button id="reset-ji-path-btn" disabled>Reset JI</button><label for="ji-zoom-slider">JI Zoom:</label> <input type="range" id="ji-zoom-slider" min="0.5" max="2" step="0.01" value="1"></div>
+            <div class="control-group"><input type="color" id="ji-color-input" value="#6495ED"><label for="ji-line-thickness">Line:</label><input type="number" id="ji-line-thickness" value="2" min="0.5" step="0.5"><label for="ji-font-size">Font:</label><input type="number" id="ji-font-size" value="12" min="1"></div></div>
+        </div>
+        
+        <div class="control-section" id="scale-section" style="top: 150px; left: 0;">
              <div class="section-header"><h4>Scale Library</h4><button class="toggle-vis-btn">⠿</button></div>
-            <div class="section-content">
+            <div class="section-content hidden">
                 <div class="control-group"><label for="scale-search">Search:</label><input type="search" id="scale-search" placeholder="Search by name, steps, alias..."></div>
                 <div class="control-group"><label for="scale-select">Scales:</label><select id="scale-select" style="width: 100%"></select></div>
                 <div class="control-group">
@@ -214,9 +220,9 @@
             </div>
         </div>
 
-        <div class="control-section" id="chord-section" style="top: 175px; left: 400px;">
+        <div class="control-section" id="chord-section" style="top: 200px; left: 0;">
              <div class="section-header"><h4>Chord Library</h4><button class="toggle-vis-btn">⠿</button></div>
-            <div class="section-content">
+            <div class="section-content hidden">
                 <div class="control-group"><label for="chord-search">Search:</label><input type="search" id="chord-search" placeholder="Search by name, steps..."></div>
                 <div class="control-group"><label for="chord-select">Chords:</label><select id="chord-select" style="width: 100%"></select></div>
                 <div class="control-group">
@@ -243,6 +249,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- DOM References ---
+            const pageZoomSlider = document.getElementById('page-zoom-slider');
             const allFloatingControls = document.querySelectorAll('.control-section input, .control-section button, .control-section select');
             const playModeBtn = document.getElementById('play-mode-btn'), playChordBtn = document.getElementById('play-chord-btn'), playScaleBtn = document.getElementById('play-scale-btn'), draw32Btn = document.getElementById('draw-32-btn');
             const edoInput = document.getElementById('edo-input'), baseFreqInput = document.getElementById('base-freq-input');
@@ -277,6 +284,7 @@
             const glowIntensity = document.getElementById('glow-intensity');
             const glowThickness = document.getElementById('glow-thickness');
 
+            let highestZIndex = 101; // For control panel stacking
 
             // --- State Variables ---
             let edo = 12, rootNoteIndex = null, currentNoteIndex = null, edoZoom = 1, jiZoom = 1, baseFrequency = 110, masterVolume = 0.5;
@@ -407,7 +415,6 @@
             async function playScale(scalePath) { if (scalePath.length < 2 || isPlayingScale) return; isPlayingScale = true; updateControls(); const runPlayback = async () => { for (const noteIndex of scalePath) { playNote(edoNotes[noteIndex].frequency); await new Promise(resolve => setTimeout(resolve, 150)); } }; if (!isAudioInitialized) { await initAudio(); } await runPlayback(); isPlayingScale = false; updateControls(); }
             function playLibraryChord() { if (selectedChordPath.length < 1) return; const play = () => selectedChordPath.map(noteIndex => edoNotes[noteIndex].frequency).forEach(freq => playNote(freq)); if (!isAudioInitialized) { initAudio().then(play); } else { play(); } }
             function togglePlayMode() { if (!isAudioInitialized) initAudio(); isPlayMode = !isPlayMode; playModeBtn.classList.toggle('play-mode-active', isPlayMode); canvas.classList.toggle('play-mode', isPlayMode); rootNoteIndex = currentNoteIndex = null; path = []; jiPath = []; selectedScaleSteps = null; selectedScalePath = []; selectedChordSteps = null; selectedChordPath = []; updateControls(); draw(); if (!isPlayMode) { setDefaultRootNote(); } }
-            function handleCanvasInteraction(e) { const rect = canvas.getBoundingClientRect(); const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left; const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top; if (isPlayMode) { for (const note of edoNotes) { if (Math.sqrt((x - note.x)**2 + (y - note.y)**2) < note.hitRadius) { playNote(note.frequency); return; } } if (showRatios) { for (const note of jiNotes) { if (Math.sqrt((x - note.ratioX)**2 + (y - note.ratioY)**2) < note.hitRadius) { playNote(note.frequency); return; } } } } else { if (path.length > 1 || isAnimating) return; for (const [index, note] of edoNotes.entries()) { if (Math.sqrt((x - note.x)**2 + (y - note.y)**2) < note.hitRadius) { rootNoteIndex = currentNoteIndex = index; path = [index]; if(selectedScaleSteps) { scaleStartNote = rootNoteIndex; calculateScalePath(); } if(selectedChordSteps) { chordStartNote = rootNoteIndex; calculateChordPath(); } updateControls(); draw(); break; } } } }
             
             // --- UI Interaction (Drag & Toggle) ---
             function initializeControlPanels() {
@@ -415,13 +422,47 @@
                     const header = section.querySelector('.section-header');
                     const toggleBtn = section.querySelector('.toggle-vis-btn');
                     let active = false, initialX, initialY;
-                    const dragStart = (e) => { header.classList.add('dragging'); if (e.type === "touchstart") { initialX = e.touches[0].clientX - section.offsetLeft; initialY = e.touches[0].clientY - section.offsetTop; } else { initialX = e.clientX - section.offsetLeft; initialY = e.clientY - section.offsetTop; } active = true; };
-                    const dragEnd = () => { header.classList.remove('dragging'); active = false; };
-                    const drag = (e) => { if (active) { e.preventDefault(); let currentX, currentY; if (e.type === "touchmove") { currentX = e.touches[0].clientX - initialX; currentY = e.clientY - initialY; } else { currentX = e.clientX - initialX; currentY = e.clientY - initialY; } section.style.left = `${currentX}px`; section.style.top = `${currentY}px`; } };
-                    header.addEventListener("mousedown", dragStart); header.addEventListener("touchstart", dragStart);
-                    document.addEventListener("mouseup", dragEnd); document.addEventListener("touchend", dragEnd);
-                    document.addEventListener("mousemove", drag); document.addEventListener("touchmove", drag, {passive: false});
-                    toggleBtn.addEventListener('click', (e) => { e.stopPropagation(); section.querySelector('.section-content').classList.toggle('hidden'); });
+                    const dragStart = (e) => {
+                        section.style.zIndex = ++highestZIndex; // Bring section to front
+                        header.classList.add('dragging');
+                        if (e.type === "touchstart") {
+                            initialX = e.touches[0].clientX - section.offsetLeft;
+                            initialY = e.touches[0].clientY - section.offsetTop;
+                        } else {
+                            initialX = e.clientX - section.offsetLeft;
+                            initialY = e.clientY - section.offsetTop;
+                        }
+                        active = true;
+                    };
+                    const dragEnd = () => {
+                        header.classList.remove('dragging');
+                        active = false;
+                    };
+                    const drag = (e) => {
+                        if (active) {
+                            e.preventDefault();
+                            let currentX, currentY;
+                            if (e.type === "touchmove") {
+                                currentX = e.touches[0].clientX - initialX;
+                                currentY = e.touches[0].clientY - initialY;
+                            } else {
+                                currentX = e.clientX - initialX;
+                                currentY = e.clientY - initialY;
+                            }
+                            section.style.left = `${currentX}px`;
+                            section.style.top = `${currentY}px`;
+                        }
+                    };
+                    header.addEventListener("mousedown", dragStart);
+                    header.addEventListener("touchstart", dragStart);
+                    document.addEventListener("mouseup", dragEnd);
+                    document.addEventListener("touchend", dragEnd);
+                    document.addEventListener("mousemove", drag);
+                    document.addEventListener("touchmove", drag, { passive: false });
+                    toggleBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        section.querySelector('.section-content').classList.toggle('hidden');
+                    });
                 });
             }
 
@@ -507,6 +548,10 @@
             function drawAnimationFrame(e,t,n,o,i){ctx.clearRect(0,0,canvas.width,canvas.height);const s=easeInOut(n),l=(e,t)=>{ctx.strokeStyle="rgba(100, 149, 237, 1)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(e[0].x,e[0].y);e.slice(1).forEach(e=>{ctx.lineTo(e.x,e.y)});ctx.stroke()},r=(e,t)=>{ctx.fillStyle="rgba(100, 149, 237, 1)";ctx.font="12px Arial";ctx.textAlign="center";ctx.textBaseline="bottom";e.forEach((e,n)=>{ctx.fillText(o.jiNotes[n].label,e.x,e.y-5)})},d=(e,t=1)=>{ctx.fillStyle=`rgba(0, 200, 83, ${.5*t})`;ctx.beginPath();ctx.arc(e.x,e.y,15,0,2*Math.PI);ctx.fill()},a=e=>{ctx.fillStyle="rgba(255, 215, 0, 0.4)";ctx.beginPath();ctx.arc(e.x,e.y,15,0,2*Math.PI);ctx.fill()},c=e=>{ctx.fillStyle="rgba(255, 0, 255, 0.5)";ctx.beginPath();ctx.arc(e.x,e.y,15,0,2*Math.PI);ctx.fill()},u=(e,t=0)=>{ctx.fillStyle="rgba(255, 255, 255, 1)";ctx.font="14px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(e,centerX,o.textY+t)};let m=1,p=o.circlePositions;const f=ANIMATION_STAGES.findIndex(e=>"UNROLL"===e.name),h=ANIMATION_STAGES.findIndex(e=>"ROLL_BACK"===e.name);if(t>=f){const i="UNROLL"===e?s:1;m=1-i,p=o.circlePositions.map((e,t)=>({x:e.x+(o.linePositions[t].x-e.x)*i,y:e.y+(o.linePositions[t].y-e.y)*i}))}"ROLL_BACK"===e&&(p=o.linePositions.map((e,t)=>({x:e.x+(o.circlePositions[t].x-e.x)*s,y:e.y+(o.circlePositions[t].y-e.y)*s}))),t>h&&(p=o.circlePositions);ctx.globalAlpha=m;drawMainCircle();drawEDONotes();ctx.globalAlpha=1;l(p);r(p);const g=ANIMATION_STAGES.findIndex(e=>"CLEAR_HIGHLIGHTS"===e.name);if(i.forEach(n=>{const i=ANIMATION_STAGES.findIndex(t=>t.name===n.name);t>=i&&t<g&&d(n.point,1),e===n.name&&(n.text.forEach((e,t)=>{u(e,20*t)}),n.components&&n.components.forEach(e=>{a(e)}),"SHOW_DERIVED_M2"===e?c(o.M2Point):"SHOW_DERIVED_m2"===e?c(o.m2Point):"SHOW_DERIVED_M6"===e?c(o.M6Point):"SHOW_DERIVED_M7"===e?c(o.M7Point):"SHOW_DERIVED_TRITONE"===e?c(o.tritonePoint):"SHOW_DERIVED_m6"===e?c(o.m6Point):"SHOW_DERIVED_m7"===e&&c(o.m7Point))}),"SHOW_THIRD_HARMONIC"===e){const t=o.lineStartX+o.lineLength*(Math.log2(3)/Math.log2(2)),n=o.octavePoint.x+(t-o.octavePoint.x)*s;ctx.strokeStyle="rgba(255, 100, 100, 0.7)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(o.octavePoint.x,o.octavePoint.y);ctx.lineTo(n,o.octavePoint.y);ctx.stroke();if(s>.9){const e=Math.min(1,(s-.9)/.1);ctx.fillStyle=`rgba(255, 100, 100, ${.5*e})`;ctx.beginPath();ctx.arc(t,o.lineY,15,0,2*Math.PI);ctx.fill();ctx.fillStyle=`rgba(255, 255, 255, ${e})`;ctx.font="12px Arial";ctx.textAlign="center";ctx.textBaseline="bottom";ctx.fillText("3/1",t,o.lineY-5)}u(`${(3*baseFrequency).toFixed(1)} Hz`);u("The 3rd harmonic is 3 times the root.",20)}else"CLEAR_HIGHLIGHTS"===e?i.forEach(e=>{d(e.point,1-s)}):"FADE_IN_EDO"===e&&(ctx.globalAlpha=s,drawMainCircle(),drawEDONotes(),ctx.globalAlpha=1)}
 
             // --- Event Handlers ---
+            pageZoomSlider.addEventListener('input', (e) => {
+                const zoomLevel = e.target.value;
+                document.body.style.transform = `scale(${zoomLevel})`;
+            });
             playModeBtn.addEventListener('click', togglePlayMode);
             playChordBtn.addEventListener('click', () => playScale(path));
             playScaleBtn.addEventListener('click', () => playScale(path));
@@ -528,8 +573,6 @@
             addIntervalBtn.addEventListener('click', () => { if (currentNoteIndex === null || isAnimating) return; currentNoteIndex = (currentNoteIndex + parseInt(intervalSelect.value)) % edo; path.push(currentNoteIndex); detectUserScale(); updateControls(); draw(); });
             edoZoomSlider.addEventListener('input', (e) => { edoZoom = parseFloat(e.target.value); updateAllRadii(); updateGlowSize(); generateAllNotes(); draw(); });
             jiZoomSlider.addEventListener('input', (e) => { jiZoom = parseFloat(e.target.value); updateAllRadii(); generateJINotes(); draw(); });
-            canvas.addEventListener('click', handleCanvasInteraction);
-            canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleCanvasInteraction(e); });
             window.addEventListener('resize', () => { setup(); setDefaultRootNote(); });
             scaleSearchInput.addEventListener('input', (e) => populateScaleSelect(e.target.value));
             scaleSelect.addEventListener('change', (e) => {
@@ -564,6 +607,130 @@
             chordColorInput.addEventListener('input', (e) => { chordPathColor = e.target.value; draw(); });
             chordLineThicknessInput.addEventListener('input', (e) => { chordPathLineWidth = parseFloat(e.target.value); draw(); });
             chordFontSizeInput.addEventListener('input', (e) => { chordIntervalFontSize = parseInt(e.target.value, 10); draw(); });
+            
+            // --- Canvas Pan and Tap Logic ---
+            const panState = { isDown: false, isPanning: false, startX: 0, startY: 0, lastX: 0, lastY: 0, touchIdentifier: null };
+
+            function handleInteractionStart(e) {
+                let evt = e.type.startsWith('touch') ? e.touches[0] : e;
+                if (e.type.startsWith('touch') && e.touches.length > 1) return; // Ignore multi-touch
+                if (panState.isDown) return; // Ignore if already interacting
+
+                panState.isDown = true;
+                panState.isPanning = false;
+                panState.startX = evt.clientX;
+                panState.startY = evt.clientY;
+                panState.lastX = evt.clientX;
+                panState.lastY = evt.clientY;
+                if (e.type.startsWith('touch')) {
+                    panState.touchIdentifier = evt.identifier;
+                }
+                canvas.style.cursor = 'grabbing';
+            }
+
+            function handleInteractionMove(e) {
+                if (!panState.isDown) return;
+                
+                let evt;
+                if (e.type.startsWith('touch')) {
+                    const touch = Array.from(e.touches).find(t => t.identifier === panState.touchIdentifier);
+                    if (!touch) return;
+                    evt = touch;
+                } else {
+                    evt = e;
+                }
+                
+                const dist = Math.hypot(evt.clientX - panState.startX, evt.clientY - panState.startY);
+
+                if (dist > 5 || panState.isPanning) { // Drag threshold of 5px
+                    if (!panState.isPanning) { // First time panning starts
+                       e.preventDefault(); // Prevent default only when panning starts
+                    }
+                    panState.isPanning = true;
+                    const deltaX = evt.clientX - panState.lastX;
+                    const deltaY = evt.clientY - panState.lastY;
+                    window.scrollBy(-deltaX, -deltaY);
+                    panState.lastX = evt.clientX;
+                    panState.lastY = evt.clientY;
+                }
+            }
+            
+            function handleInteractionEnd(e) {
+                if (!panState.isDown) return;
+                 // Ensure the ended touch/click matches the one that started
+                if (e.type.startsWith('touch')) {
+                    const touch = Array.from(e.changedTouches).find(t => t.identifier === panState.touchIdentifier);
+                    if (!touch) return;
+                }
+
+                panState.isDown = false;
+                canvas.style.cursor = 'grab';
+
+                if (!panState.isPanning) {
+                    handleTap(e);
+                }
+                panState.touchIdentifier = null;
+            }
+
+            function handleTap(e) {
+                let clientX, clientY;
+                if (e.changedTouches && e.changedTouches.length > 0) {
+                    clientX = e.changedTouches[0].clientX;
+                    clientY = e.changedTouches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
+
+                if (isPlayMode) {
+                    for (const note of edoNotes) {
+                        if (Math.sqrt((x - note.x)**2 + (y - note.y)**2) < note.hitRadius) {
+                            playNote(note.frequency);
+                            return;
+                        }
+                    }
+                    if (showRatios) {
+                        for (const note of jiNotes) {
+                            if (Math.sqrt((x - note.ratioX)**2 + (y - note.ratioY)**2) < note.hitRadius) {
+                                playNote(note.frequency);
+                                return;
+                            }
+                        }
+                    }
+                } else {
+                    if (path.length > 1 || isAnimating) return;
+                    for (const [index, note] of edoNotes.entries()) {
+                        if (Math.sqrt((x - note.x)**2 + (y - note.y)**2) < note.hitRadius) {
+                            rootNoteIndex = currentNoteIndex = index;
+                            path = [index];
+                            if(selectedScaleSteps) {
+                                scaleStartNote = rootNoteIndex;
+                                calculateScalePath();
+                            }
+                            if(selectedChordSteps) {
+                                chordStartNote = rootNoteIndex;
+                                calculateChordPath();
+                            }
+                            updateControls();
+                            draw();
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            canvas.addEventListener('mousedown', handleInteractionStart);
+            document.addEventListener('mousemove', handleInteractionMove);
+            document.addEventListener('mouseup', handleInteractionEnd);
+            canvas.addEventListener('touchstart', handleInteractionStart, { passive: true }); // passive true for start
+            document.addEventListener('touchmove', handleInteractionMove, { passive: false }); // passive false for move to allow preventDefault
+            document.addEventListener('touchend', handleInteractionEnd);
+
+
             // Glow effect event handlers
             glowToggle.addEventListener('change', () => {
                 glowContainer.classList.toggle('hidden', !glowToggle.checked);
@@ -592,6 +759,10 @@
             setup();
             setDefaultRootNote();
             initializeControlPanels();
+
+            // --- Apply new defaults on load ---
+            pageZoomSlider.dispatchEvent(new Event('input')); // Apply default zoom
+            glowToggle.dispatchEvent(new Event('change')); // Apply default glow state
         });
     </script>
 </body>
