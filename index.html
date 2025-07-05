@@ -20,6 +20,14 @@
             align-items: center;
         }
 
+        /* --- CORRECTED/NEW STYLES --- */
+        #chromaticCircleCanvas {
+            position: relative; /* Make z-index work */
+            z-index: 2; /* Ensure canvas is on top */
+        }
+        #chromaticCircleCanvas.play-mode { cursor: pointer; }
+        /* --- END CORRECTIONS --- */
+
         #controls-wrapper {
             position: absolute;
             top: 10px;
@@ -75,11 +83,10 @@
         input[type="search"] { flex-grow: 1; }
         input[type="range"] { padding: 0; cursor: grab; flex-grow: 1; }
         input[type="color"] { width: 40px; padding: 2px; height: 30px; border-radius: 4px; }
+        input[type="checkbox"] { width: 18px; height: 18px; accent-color: #00C853; }
         select:hover, input:hover, button:hover:not(:disabled) { background-color: #444; border-color: #777; }
         button:disabled, select:disabled, input:disabled { background-color: #222; color: #666; border-color: #444; cursor: not-allowed; }
         .play-mode-active { background-color: #00C853; border-color: #00e676; }
-        
-        #chromaticCircleCanvas.play-mode { cursor: pointer; }
         
         #animation-controls {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 50;
@@ -111,25 +118,81 @@
         #scale-info-display strong { color: #fff; }
         #scale-info-display ul { list-style: none; padding: 0; margin: 0; }
         #scale-info-display li { padding: 2px 0; }
+
+        /* --- Glow Effect Styles --- */
+        #glow-circle-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1; /* Place it behind the canvas but in front of the background */
+            pointer-events: none; /* Make it unclickable */
+            transition: transform 0.2s ease-out; /* For smooth zooming */
+        }
+        #glow-circle-container.hidden { display: none; }
+        
+        .glowing-circle {
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
+            border: var(--glow-border-width, 10px) solid var(--glow-ring-color, #ff00f2);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 
+                /* Dynamic Highlight */
+                var(--shadow-x, 0px) var(--shadow-y, 0px) var(--glow-highlight-blur, 40px) var(--glow-highlight-spread, -10px) rgba(255, 255, 255, 0.9),
+                /* Inner Glow */
+                inset 0 0 var(--glow-inner-blur1, 15px) 0px var(--glow-color, #ff00f2),
+                inset 0 0 var(--glow-inner-blur2, 30px) var(--glow-inner-spread, -10px) rgba(255, 255, 255, 0.9),
+                /* Outer Glow */
+                0 0 var(--glow-outer-blur1, 15px) var(--glow-outer-spread1, -5px) var(--glow-color, #ff00f2),
+                0 0 var(--glow-outer-blur2, 40px) var(--glow-outer-spread2, 10px) var(--glow-color, #ff00f2),
+                0 0 var(--glow-outer-blur3, 90px) var(--glow-outer-spread3, 30px) var(--glow-haze-color, rgba(255, 0, 242, 0.5));
+            animation: pulse 5s ease-in-out infinite;
+            transition: box-shadow 0.1s ease-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.85; }
+            50% { transform: scale(1.03); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.85; }
+        }
+
     </style>
 </head>
 <body>
 
-    <div id="canvas-container"><canvas id="chromaticCircleCanvas"></canvas></div>
+    <div id="canvas-container">
+        <div id="glow-circle-container" class="hidden"><div class="glowing-circle"></div></div>
+        <canvas id="chromaticCircleCanvas"></canvas>
+    </div>
 
     <div id="controls-wrapper">
         <div class="control-section" id="edo-section" style="top: 0; left: 0;">
             <div class="section-header"><h4>EDO Settings</h4><button class="toggle-vis-btn">⠿</button></div>
-            <div class="section-content"><div class="control-group"><label for="base-freq-input">Base Hz:</label> <input type="number" id="base-freq-input" value="110" min="1"><label for="edo-input">EDO:</label> <input type="number" id="edo-input" value="12" min="1" max="360"><button id="show-edo-freqs-btn">EDO Freqs</button></div><div class="control-group"><label for="edo-zoom-slider">EDO Zoom:</label> <input type="range" id="edo-zoom-slider" min="0.5" max="2" step="0.01" value="1"></div></div>
+            <div class="section-content">
+                <div class="control-group"><label for="base-freq-input">Base Hz:</label> <input type="number" id="base-freq-input" value="110" min="1"><label for="edo-input">EDO:</label> <input type="number" id="edo-input" value="12" min="1" max="360"><button id="show-edo-freqs-btn">EDO Freqs</button></div>
+                <div class="control-group"><label for="edo-zoom-slider">EDO Zoom:</label> <input type="range" id="edo-zoom-slider" min="0.5" max="2" step="0.01" value="1"></div>
+                <div class="control-group" style="border-top: 1px solid #333; padding-top: 10px;">
+                    <label for="glow-toggle">Visual Glow:</label> <input type="checkbox" id="glow-toggle">
+                    <label for="glow-color">Color:</label> <input type="color" id="glow-color" value="#ff00f2" disabled>
+                </div>
+                <div class="control-group">
+                    <label for="glow-intensity">Intensity:</label> <input type="range" id="glow-intensity" min="0.5" max="2.0" step="0.1" value="1.0" disabled>
+                </div>
+                <div class="control-group">
+                    <label for="glow-thickness">Thickness:</label> <input type="range" id="glow-thickness" min="2" max="20" step="1" value="10" disabled>
+                </div>
+            </div>
         </div>
 
-        <div class="control-section" id="ji-section" style="top: 150px; left: 0;">
+        <div class="control-section" id="ji-section" style="top: 315px; left: 0;">
             <div class="section-header"><h4>Just Intonation</h4><button class="toggle-vis-btn">⠿</button></div>
             <div class="section-content"><div class="control-group"><button id="toggle-ratios-btn">JI Ratios</button><button id="show-ji-freqs-btn">JI Freqs</button><button id="toggle-names-btn">Names</button><button id="animate-btn">Animate JI</button></div><div class="control-group"><button id="draw-32-btn" disabled>Draw 3/2</button><button id="reset-ji-path-btn" disabled>Reset JI</button><label for="ji-zoom-slider">JI Zoom:</label> <input type="range" id="ji-zoom-slider" min="0.5" max="2" step="0.01" value="1"></div>
             <div class="control-group"><input type="color" id="ji-color-input" value="#6495ED"><label for="ji-line-thickness">Line:</label><input type="number" id="ji-line-thickness" value="2" min="0.5" step="0.5"><label for="ji-font-size">Font:</label><input type="number" id="ji-font-size" value="12" min="1"></div></div>
         </div>
         
-        <div class="control-section" id="playback-section" style="top: 315px; left: 0;">
+        <div class="control-section" id="playback-section" style="top: 480px; left: 0;">
              <div class="section-header"><h4>Playback & Intervals</h4><button class="toggle-vis-btn">⠿</button></div>
             <div class="section-content"><div class="control-group"><label for="interval-select">Interval:</label> <select id="interval-select" disabled></select><button id="add-interval-btn" disabled>Add</button><button id="reset-edo-path-btn">Reset Path</button></div><div class="control-group"><button id="roll-left-btn">Roll Left</button><button id="roll-right-btn">Roll Right</button></div>
             <div class="control-group"><input type="color" id="edo-color-input" value="#CCCCCC"><label for="edo-line-thickness">Line:</label><input type="number" id="edo-line-thickness" value="1.5" min="0.5" step="0.5"><label for="edo-font-size">Font:</label><input type="number" id="edo-font-size" value="11" min="1"></div>
@@ -206,6 +269,14 @@
             const edoColorInput = document.getElementById('edo-color-input'), edoLineThicknessInput = document.getElementById('edo-line-thickness'), edoFontSizeInput = document.getElementById('edo-font-size');
             const scaleColorInput = document.getElementById('scale-color-input'), scaleLineThicknessInput = document.getElementById('scale-line-thickness'), scaleFontSizeInput = document.getElementById('scale-font-size');
             const chordColorInput = document.getElementById('chord-color-input'), chordLineThicknessInput = document.getElementById('chord-line-thickness'), chordFontSizeInput = document.getElementById('chord-font-size');
+            // Glow effect DOM references
+            const glowContainer = document.getElementById('glow-circle-container');
+            const glowCircle = document.querySelector('.glowing-circle');
+            const glowToggle = document.getElementById('glow-toggle');
+            const glowColor = document.getElementById('glow-color');
+            const glowIntensity = document.getElementById('glow-intensity');
+            const glowThickness = document.getElementById('glow-thickness');
+
 
             // --- State Variables ---
             let edo = 12, rootNoteIndex = null, currentNoteIndex = null, edoZoom = 1, jiZoom = 1, baseFrequency = 110, masterVolume = 0.5;
@@ -245,7 +316,7 @@
             const TOTAL_ANIMATION_DURATION = ANIMATION_STAGES.reduce((sum, s) => sum + s.duration, 0);
 
             // --- App Logic Functions ---
-            function resizeAndRecalculate() { const canvasSize = Math.min(window.innerWidth, window.innerHeight); canvas.width = canvasSize; canvas.height = canvasSize; centerX = canvas.width / 2; centerY = canvas.height / 2; baseCircleRadius = canvas.width * 0.22; updateAllRadii(); }
+            function resizeAndRecalculate() { const canvasSize = Math.min(window.innerWidth, window.innerHeight); canvas.width = canvasSize; canvas.height = canvasSize; centerX = canvas.width / 2; centerY = canvas.height / 2; baseCircleRadius = canvas.width * 0.22; updateAllRadii(); updateGlowSize(); }
             function updateAllRadii() { circleRadius = baseCircleRadius * edoZoom; edoFreqLabelRadius = circleRadius * 1.30; ratioLabelRadius = circleRadius * 1.60 * jiZoom; jiFreqLabelRadius = circleRadius * 1.90 * jiZoom; nameLabelRadius = circleRadius * 2.20 * jiZoom; let scaleNameRadius = circleRadius * 1.45; noteRadius = Math.max(9, canvas.width / 50); }
             function setup() {
                 initializeLibraries();
@@ -317,6 +388,11 @@
                     draw32Btn.disabled = !hasRoot || isPlayMode; resetJiPathBtn.disabled = !jiPathIsPlayable; toggleNamesBtn.disabled = !showRatios;
                     rollScaleLeftBtn.disabled = !scaleIsSelected || isPlayMode; rollScaleRightBtn.disabled = !scaleIsSelected || isPlayMode; playLibraryScaleBtn.disabled = !scaleIsSelected || isPlayMode; scaleInfoBtn.disabled = !scaleIsSelected || isPlayMode;
                     rollChordLeftBtn.disabled = !chordIsSelected || isPlayMode; rollChordRightBtn.disabled = !chordIsSelected || isPlayMode; playLibraryChordBtn.disabled = !chordIsSelected || isPlayMode;
+                    // Handle glow controls enable/disable state
+                    const glowEnabled = glowToggle.checked;
+                    glowColor.disabled = !glowEnabled || isAnimating || isPlayingScale;
+                    glowIntensity.disabled = !glowEnabled || isAnimating || isPlayingScale;
+                    glowThickness.disabled = !glowEnabled || isAnimating || isPlayingScale;
                 }
                 if (isPlayMode) { instructions.textContent = 'Play Mode: Click or touch notes to play them.'; } 
                 else if (isPlayingScale) { instructions.textContent = 'Playing scale...'; } 
@@ -391,6 +467,37 @@
                     scaleInfoDisplay.classList.add('hidden');
                 }
             }
+
+            // --- Glow Effect Functions ---
+            function updateGlowSize() {
+                if (!glowContainer) return;
+                const diameter = circleRadius * 2;
+                glowContainer.style.width = `${diameter}px`;
+                glowContainer.style.height = `${diameter}px`;
+            }
+            function updateGlowStyle() {
+                if (!glowCircle || !glowToggle.checked) return;
+                const thickness = glowThickness.value;
+                const color = glowColor.value;
+                const intensity = glowIntensity.value;
+                const hexToRgba = (hex, alpha) => { let r=0,g=0,b=0; if(hex.length==4){r="0x"+hex[1]+hex[1];g="0x"+hex[2]+hex[2];b="0x"+hex[3]+hex[3]}else if(hex.length==7){r="0x"+hex[1]+hex[2];g="0x"+hex[3]+hex[4];b="0x"+hex[5]+hex[6]} return`rgba(${+r},${+g},${+b},${alpha})` };
+                glowCircle.style.setProperty('--glow-border-width', `${thickness}px`);
+                glowCircle.style.setProperty('--glow-ring-color', color);
+                glowCircle.style.setProperty('--glow-color', color);
+                glowCircle.style.setProperty('--glow-haze-color', hexToRgba(color, 0.5));
+                // Scale blur/spread values by intensity
+                glowCircle.style.setProperty('--glow-highlight-blur', `${40 * intensity}px`);
+                glowCircle.style.setProperty('--glow-highlight-spread', `${-10 * intensity}px`);
+                glowCircle.style.setProperty('--glow-inner-blur1', `${15 * intensity}px`);
+                glowCircle.style.setProperty('--glow-inner-blur2', `${30 * intensity}px`);
+                glowCircle.style.setProperty('--glow-inner-spread', `${-10 * intensity}px`);
+                glowCircle.style.setProperty('--glow-outer-blur1', `${15 * intensity}px`);
+                glowCircle.style.setProperty('--glow-outer-spread1', `${-5 * intensity}px`);
+                glowCircle.style.setProperty('--glow-outer-blur2', `${40 * intensity}px`);
+                glowCircle.style.setProperty('--glow-outer-spread2', `${10 * intensity}px`);
+                glowCircle.style.setProperty('--glow-outer-blur3', `${90 * intensity}px`);
+                glowCircle.style.setProperty('--glow-outer-spread3', `${30 * intensity}px`);
+            }
             
             // --- Animation Engine ---
             const easeInOut=t=>t<.5?2*t*t:-1+(4-2*t)*t;let animData,highlightStages,stageStartTimes;function startAnimation(){if(isAnimating)return;isAnimating=!0;isPaused=!1;pausedTime=0;pausePlayBtn.textContent="Pause";animationControls.style.display="flex";rootNoteIndex=currentNoteIndex=null;path=[];jiPath=[];updateControls();resizeAndRecalculate();generateAllNotes();const e=canvas.width*.8,t=canvas.width*.1,n=centerY,o=centerY+60,i=jiNotes.map(a=>({x:t+a.cents/1200*e,y:n})),s=jiNotes.map(a=>({x:a.ratioX,y:a.ratioY})),l=[...jiNotes,{label:"2/1"}],r=[...i,{x:t+e,y:n}],d=[...s,{x:s[0].x,y:s[0].y}];animData={jiNotes:l,linePositions:r,circlePositions:d,lineLength:e,lineStartX:t,lineY:n,textY:o,rootPoint:r[0],octavePoint:r[r.length-1],p5Point:r[l.findIndex(a=>"3/2"===a.label)],p4Point:r[l.findIndex(a=>"4/3"===a.label)],M3Point:r[l.findIndex(a=>"5/4"===a.label)],m3Point:r[l.findIndex(a=>"6/5"===a.label)],M2Point:r[l.findIndex(a=>"9/8"===a.label)],M6Point:r[l.findIndex(a=>"5/3"===a.label)],m2Point:r[l.findIndex(a=>"16/15"===a.label)],M7Point:r[l.findIndex(a=>"15/8"===a.label)],tritonePoint:r[l.findIndex(a=>"45/32"===a.label)],m6Point:r[l.findIndex(a=>"8/5"===a.label)],m7Point:r[l.findIndex(a=>"9/5"===a.label)]};highlightStages=[{name:"SHOW_ROOT",point:animData.rootPoint,text:[`${baseFrequency.toFixed(1)} Hz`,"The root is the 1st harmonic."]},{name:"SHOW_OCTAVE",point:animData.octavePoint,text:[`${(2*baseFrequency).toFixed(1)} Hz`,"The 2nd harmonic is 2 times the root."]},{name:"SHOW_PERFECT_FIFTH",point:animData.p5Point,text:["The 3rd harmonic divided by 2 to keep it in the circle."]},{name:"SHOW_FOURTH_HARMONIC",point:animData.octavePoint,text:[`${(4*baseFrequency).toFixed(1)} Hz`,"The 4th harmonic is 2 times the 2nd harmonic."]},{name:"SHOW_PERFECT_FOURTH",point:animData.p4Point,text:["The 3rd harmonic inverted and multiplied by 4 to be in the circle."]},{name:"SHOW_MAJOR_THIRD",point:animData.M3Point,text:[`${(5*baseFrequency).toFixed(1)} Hz`,"The 5th harmonic is divided by 4 to keep it in the circle."]},{name:"SHOW_MINOR_THIRD",point:animData.m3Point,text:["The interval between the 5th and 6th harmonics, or the 19th harmonic."]},{name:"SHOW_DERIVED_M2",point:animData.M2Point,text:["(3/2) * (3/2) = 9/8,","or the 9th harmonic divided to be in the circle."],components:[animData.p5Point]},{name:"SHOW_DERIVED_M6",point:animData.M6Point,text:["(5/4) * (4/3) = 5/3"],components:[animData.M3Point,animData.p4Point]},{name:"SHOW_DERIVED_m2",point:animData.m2Point,text:["(4/3) / (5/4) = 16/15"],components:[animData.p4Point,animData.M3Point]},{name:"SHOW_DERIVED_M7",point:animData.M7Point,text:["(5/4) * (3/2) = 15/8"],components:[animData.M3Point,animData.p5Point]},{name:"SHOW_DERIVED_TRITONE",point:animData.tritonePoint,text:["(15/8) * (3/2) = 45/32"],components:[animData.M7Point,animData.p5Point]},{name:"SHOW_DERIVED_m6",point:animData.m6Point,text:["(16/15) * (3/2) = 8/5"],components:[animData.m2Point,animData.p5Point]},{name:"SHOW_DERIVED_m7",point:animData.m7Point,text:["(6/5) * (3/2) = 9/5"],components:[animData.m3Point,animData.p5Point]}];let a=0;stageStartTimes=ANIMATION_STAGES.map(e=>(a+=e.duration)-e.duration);startTime=performance.now();animationFrameId=requestAnimationFrame(animationLoop)}
@@ -419,7 +526,7 @@
             showEdoFreqsBtn.addEventListener('click', () => { if(!isAnimating) { showEdoFreqs = !showEdoFreqs; draw(); }});
             showJiFreqsBtn.addEventListener('click', () => { if(!isAnimating) { showJiFreqs = !showJiFreqs; draw(); }});
             addIntervalBtn.addEventListener('click', () => { if (currentNoteIndex === null || isAnimating) return; currentNoteIndex = (currentNoteIndex + parseInt(intervalSelect.value)) % edo; path.push(currentNoteIndex); detectUserScale(); updateControls(); draw(); });
-            edoZoomSlider.addEventListener('input', (e) => { edoZoom = parseFloat(e.target.value); updateAllRadii(); generateAllNotes(); draw(); });
+            edoZoomSlider.addEventListener('input', (e) => { edoZoom = parseFloat(e.target.value); updateAllRadii(); updateGlowSize(); generateAllNotes(); draw(); });
             jiZoomSlider.addEventListener('input', (e) => { jiZoom = parseFloat(e.target.value); updateAllRadii(); generateJINotes(); draw(); });
             canvas.addEventListener('click', handleCanvasInteraction);
             canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleCanvasInteraction(e); });
@@ -457,6 +564,28 @@
             chordColorInput.addEventListener('input', (e) => { chordPathColor = e.target.value; draw(); });
             chordLineThicknessInput.addEventListener('input', (e) => { chordPathLineWidth = parseFloat(e.target.value); draw(); });
             chordFontSizeInput.addEventListener('input', (e) => { chordIntervalFontSize = parseInt(e.target.value, 10); draw(); });
+            // Glow effect event handlers
+            glowToggle.addEventListener('change', () => {
+                glowContainer.classList.toggle('hidden', !glowToggle.checked);
+                if (glowToggle.checked) {
+                    updateGlowStyle();
+                }
+                updateControls();
+            });
+            [glowColor, glowIntensity, glowThickness].forEach(el => {
+                el.addEventListener('input', updateGlowStyle);
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (!glowCircle || !glowToggle.checked) return;
+                const rect = glowContainer.getBoundingClientRect();
+                const circleX = rect.left + rect.width / 2;
+                const circleY = rect.top + rect.height / 2;
+                const shadowX = (e.clientX - circleX) / 15;
+                const shadowY = (e.clientY - circleY) / 15;
+                glowCircle.style.setProperty('--shadow-x', `${shadowX}px`);
+                glowCircle.style.setProperty('--shadow-y', `${shadowY}px`);
+            });
+
 
             // Initial setup
             initializeLibraries();
