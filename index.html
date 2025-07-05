@@ -261,7 +261,21 @@
             }
             function drawScalePath() { if (selectedScalePath.length <= 1) return; ctx.strokeStyle = '#28a745'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(edoNotes[selectedScalePath[0]].x, edoNotes[selectedScalePath[0]].y); selectedScalePath.slice(1).forEach(index => ctx.lineTo(edoNotes[index].x, edoNotes[index].y)); ctx.lineTo(edoNotes[selectedScalePath[0]].x, edoNotes[selectedScalePath[0]].y); ctx.stroke(); }
             function drawScaleModeNames() { const scaleNameRadius = circleRadius * 1.45; ctx.fillStyle = '#28a745'; ctx.font = '11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; selectedScalePath.forEach((noteIndex, i) => { if (scaleModeNames[i]) { const note = edoNotes[noteIndex]; const angle = note.angle; const x = centerX + scaleNameRadius * Math.cos(angle); const y = centerY + scaleNameRadius * Math.sin(angle); ctx.fillText(scaleModeNames[i], x, y); } }); }
-            function drawChordPath() { if (selectedChordPath.length <= 1) return; ctx.strokeStyle = '#ff4136'; ctx.lineWidth = 3; ctx.beginPath(); selectedChordPath.forEach(index => { ctx.moveTo(centerX, centerY); ctx.lineTo(edoNotes[index].x, edoNotes[index].y); }); ctx.stroke(); }
+            function drawChordPath() {
+                if (selectedChordPath.length <= 1) return;
+                ctx.strokeStyle = '#ff4136'; // Red color
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                const firstNote = edoNotes[selectedChordPath[0]];
+                ctx.moveTo(firstNote.x, firstNote.y);
+                for (let i = 1; i < selectedChordPath.length; i++) {
+                    const nextNote = edoNotes[selectedChordPath[i]];
+                    ctx.lineTo(nextNote.x, nextNote.y);
+                }
+                ctx.lineTo(firstNote.x, firstNote.y);
+                ctx.stroke();
+            }
             function drawChordIntervalNames() { const nameRadius = circleRadius * 1.15; ctx.fillStyle = '#ff4136'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; selectedChordPath.forEach((noteIndex, i) => { if (chordIntervalNames[i]) { const note = edoNotes[noteIndex]; const angle = note.angle; const x = centerX + nameRadius * Math.cos(angle); const y = centerY + nameRadius * Math.sin(angle); ctx.fillText(chordIntervalNames[i], x, y); } }); }
             function updateControls() {
                 const hasRoot = currentNoteIndex !== null; const pathIsPlayable = path.length >= 2; const jiPathIsPlayable = jiPath.length > 0; const scaleIsSelected = selectedScalePath.length > 0; const chordIsSelected = selectedChordPath.length > 0;
